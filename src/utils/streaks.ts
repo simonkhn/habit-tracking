@@ -12,8 +12,8 @@ export function calculateStreak(
   let countingCurrent = true;
 
   for (const log of logs) {
-    const habitData = log.habits[habitId];
-    if (habitData.completed) {
+    const habitData = log.habits?.[habitId];
+    if (habitData?.completed) {
       streak++;
       if (countingCurrent) current = streak;
     } else {
@@ -33,10 +33,10 @@ export function calculateCompletionRate(
   habitId: HabitId
 ): number {
   if (logs.length === 0) return 0;
-  const completed = logs.filter((log) => log.habits[habitId].completed).length;
+  const completed = logs.filter((log) => log.habits?.[habitId]?.completed).length;
   return completed / logs.length;
 }
 
 export function calculateDayCompletionCount(habits: HabitLog['habits']): number {
-  return HABIT_ORDER.filter((id) => habits[id].completed).length;
+  return HABIT_ORDER.filter((id) => habits?.[id]?.completed).length;
 }

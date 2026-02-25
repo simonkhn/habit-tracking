@@ -40,7 +40,7 @@ export function useHabits() {
     return () => unsubscribe();
   }, [userId, date]);
 
-  const habits: DayHabits = log?.habits ?? createEmptyDayHabits();
+  const habits: DayHabits = { ...createEmptyDayHabits(), ...log?.habits };
 
   const toggleBinaryHabit = useCallback(
     async (habitId: HabitId) => {
