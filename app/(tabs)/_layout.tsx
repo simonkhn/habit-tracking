@@ -35,11 +35,11 @@ export default function TabsLayout() {
         }}
       />
       <Tabs.Screen
-        name="partner"
+        name="feed"
         options={{
-          title: 'Partner',
+          title: 'Feed',
           tabBarIcon: ({ color, size }) => (
-            <Ionicons name="people-outline" size={size} color={color} />
+            <Ionicons name="chatbubbles-outline" size={size} color={color} />
           ),
         }}
       />

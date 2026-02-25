@@ -54,6 +54,48 @@ export interface HabitLog {
   habits: DayHabits;
 }
 
+// Feed types
+export type ReactionEmoji = 'fire' | 'heart' | 'clap' | 'flex' | 'party';
+
+export const REACTION_EMOJIS: { key: ReactionEmoji; emoji: string }[] = [
+  { key: 'fire', emoji: '\uD83D\uDD25' },
+  { key: 'heart', emoji: '\u2764\uFE0F' },
+  { key: 'clap', emoji: '\uD83D\uDC4F' },
+  { key: 'flex', emoji: '\uD83D\uDCAA' },
+  { key: 'party', emoji: '\uD83C\uDF89' },
+];
+
+export interface FeedReaction {
+  emoji: ReactionEmoji;
+  timestamp: FirebaseFirestoreTypes.Timestamp;
+}
+
+export interface FeedComment {
+  userId: string;
+  text: string;
+  timestamp: FirebaseFirestoreTypes.Timestamp;
+}
+
+export interface FeedInteraction {
+  reactions: Record<string, FeedReaction>; // keyed by userId
+  comments: FeedComment[];
+}
+
+export interface FeedEvent {
+  id: string; // {userId}_{date}_{habitId|allComplete}
+  userId: string;
+  userName: string;
+  date: string;
+  habitId: HabitId | 'allComplete';
+  habitLabel: string;
+  habitColor: string;
+  habitIcon: string;
+  habitType: HabitType | 'allComplete';
+  completedAt: Date;
+  flavorText: string;
+  interaction: FeedInteraction | null;
+}
+
 // Personal habits (private, per-user)
 export interface PersonalHabitDefinition {
   id: string;

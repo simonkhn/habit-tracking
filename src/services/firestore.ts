@@ -1,5 +1,5 @@
 import firestore from '@react-native-firebase/firestore';
-import { HabitLog, DayHabits, HabitId, HabitData, PersonalHabitLog } from '../types/habit';
+import { HabitLog, DayHabits, HabitId, HabitData, PersonalHabitLog, FeedInteraction, FeedComment, ReactionEmoji } from '../types/habit';
 import { createEmptyDayHabits } from '../config/habits';
 import { getHabitLogId, getTodayDateString } from '../utils/dates';
 
@@ -135,4 +135,76 @@ export function subscribeToPersonalLog(
       onData(null);
     }
   });
+}
+
+// --- Feed interactions (reactions & comments) ---
+
+function getFeedInteractionRef(eventId: string) {
+  return firestore().collection('feedInteractions').doc(eventId);
+}
+
+export function getFeedEventId(userId: string, date: string, habitId: string): string {
+  return `${userId}_${date}_${habitId}`;
+}
+
+export function subscribeToFeedInteractions(
+  eventIds: string[],
+  onData: (interactions: Record<string, FeedInteraction>) => void
+) {
+  if (eventIds.length === 0) {
+    onData({});
+    return () => {};
+  }
+
+  const interactions: Record<string, FeedInteraction> = {};
+  const unsubscribes: (() => void)[] = [];
+
+  for (const eventId of eventIds) {
+    const unsub = getFeedInteractionRef(eventId).onSnapshot((snapshot) => {
+      if (snapshot.exists()) {
+        interactions[eventId] = snapshot.data() as FeedInteraction;
+      } else {
+        delete interactions[eventId];
+      }
+      onData({ ...interactions });
+    });
+    unsubscribes.push(unsub);
+  }
+
+  return () => unsubscribes.forEach((u) => u());
+}
+
+export async function addReaction(eventId: string, userId: string, emoji: ReactionEmoji) {
+  const ref = getFeedInteractionRef(eventId);
+  return ref.set(
+    {
+      [`reactions.${userId}`]: {
+        emoji,
+        timestamp: firestore.FieldValue.serverTimestamp(),
+      },
+    },
+    { merge: true }
+  );
+}
+
+export async function removeReaction(eventId: string, userId: string) {
+  const ref = getFeedInteractionRef(eventId);
+  return ref.update({
+    [`reactions.${userId}`]: firestore.FieldValue.delete(),
+  });
+}
+
+export async function addComment(eventId: string, userId: string, text: string) {
+  const ref = getFeedInteractionRef(eventId);
+  const comment: FeedComment = {
+    userId,
+    text,
+    timestamp: firestore.Timestamp.now(),
+  };
+  return ref.set(
+    {
+      comments: firestore.FieldValue.arrayUnion(comment),
+    },
+    { merge: true }
+  );
 }
