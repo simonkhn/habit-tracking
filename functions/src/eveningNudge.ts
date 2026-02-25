@@ -20,19 +20,22 @@ const HABIT_LABELS: Record<string, string> = {
 
 const ALL_HABIT_IDS = Object.keys(HABIT_LABELS);
 
-function getTodayDateString(): string {
+function getTodayDateStringET(): string {
   const now = new Date();
-  const year = now.getFullYear();
-  const month = String(now.getMonth() + 1).padStart(2, '0');
-  const day = String(now.getDate()).padStart(2, '0');
-  return `${year}-${month}-${day}`;
+  const eastern = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'America/New_York',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).format(now);
+  return eastern;
 }
 
 export const eveningNudge = functions.pubsub
   .schedule('0 21 * * *')
   .timeZone('America/New_York')
   .onRun(async () => {
-    const today = getTodayDateString();
+    const today = getTodayDateStringET();
 
     const usersSnapshot = await admin.firestore().collection('users').get();
 

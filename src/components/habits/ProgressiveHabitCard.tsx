@@ -1,11 +1,20 @@
-import React, { useCallback, useEffect, useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import React, { useCallback, useEffect, useState, useRef } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, Pressable } from 'react-native';
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withTiming,
+  withSpring,
+  runOnJS,
+} from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
 import { HabitDefinition, WaterHabitData, ReadingHabitData } from '../../types/habit';
 import { HabitIcon } from './HabitIcon';
 import { WATER_INCREMENT_OZ, READING_TARGET_PAGES } from '../../config/habits';
 import { useAuthStore } from '../../stores/authStore';
 import { colors, typography, fontWeights, spacing, borderRadius } from '../../theme';
+
+const HOLD_DURATION = 500;
 
 interface ProgressiveHabitCardProps {
   definition: HabitDefinition;
@@ -36,6 +45,68 @@ export function ProgressiveHabitCard({
   const unit = isWater ? 'oz' : 'pages';
   const progress = target > 0 ? Math.min(localValue / target, 1) : 0;
 
+  const fillProgress = useSharedValue(0);
+  const cardScale = useSharedValue(1);
+  const holdTimer = useRef<NodeJS.Timeout | null>(null);
+  const isHolding = useRef(false);
+  const justCompleted = useRef(false);
+
+  const triggerHoldComplete = useCallback(() => {
+    justCompleted.current = true;
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    setLocalValue(target);
+    onUpdate(target);
+    fillProgress.value = withTiming(0, { duration: 200 });
+    cardScale.value = withSpring(1);
+  }, [target, onUpdate]);
+
+  const handlePressIn = useCallback(() => {
+    if (data.completed) return;
+    isHolding.current = true;
+    cardScale.value = withTiming(0.97, { duration: 100 });
+    fillProgress.value = withTiming(1, { duration: HOLD_DURATION });
+
+    holdTimer.current = setTimeout(() => {
+      if (isHolding.current) {
+        runOnJS(triggerHoldComplete)();
+      }
+    }, HOLD_DURATION);
+  }, [data.completed, triggerHoldComplete]);
+
+  const handlePressOut = useCallback(() => {
+    isHolding.current = false;
+    if (holdTimer.current) {
+      clearTimeout(holdTimer.current);
+      holdTimer.current = null;
+    }
+    if (!data.completed) {
+      fillProgress.value = withTiming(0, { duration: 150 });
+    }
+    cardScale.value = withSpring(1);
+  }, [data.completed]);
+
+  const handleTap = useCallback(() => {
+    if (justCompleted.current) {
+      justCompleted.current = false;
+      return;
+    }
+    if (data.completed) {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      const undoValue = Math.max(0, target - increment);
+      setLocalValue(undoValue);
+      onUpdate(undoValue);
+    }
+  }, [data.completed, target, increment, onUpdate]);
+
+  const fillStyle = useAnimatedStyle(() => ({
+    width: `${fillProgress.value * 100}%`,
+    backgroundColor: `${definition.color}26`,
+  }));
+
+  const cardAnimStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: cardScale.value }],
+  }));
+
   const handleIncrement = useCallback(() => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     const newValue = localValue + increment;
@@ -55,83 +126,99 @@ export function ProgressiveHabitCard({
   }, [localValue, increment, onUpdate]);
 
   return (
-    <View style={[styles.card, data.completed && styles.cardCompleted]}>
-      <View style={styles.row}>
-        <View
-          style={[
-            styles.iconContainer,
-            { backgroundColor: `${definition.color}1A` },
-          ]}
-        >
-          <HabitIcon
-            name={definition.icon}
-            size={22}
-            color={definition.color}
-          />
-        </View>
-
-        <View style={styles.textContainer}>
-          <Text
-            style={[styles.label, data.completed && styles.labelCompleted]}
+    <Pressable
+      onPressIn={handlePressIn}
+      onPressOut={handlePressOut}
+      onPress={handleTap}
+    >
+      <Animated.View
+        style={[
+          styles.card,
+          data.completed && styles.cardCompleted,
+          cardAnimStyle,
+        ]}
+      >
+        <Animated.View style={[styles.fillOverlay, fillStyle]} />
+        <View style={styles.row}>
+          <View
+            style={[
+              styles.iconContainer,
+              { backgroundColor: `${definition.color}1A` },
+            ]}
           >
-            {definition.label}
-          </Text>
-          <Text style={styles.subtitle}>
-            {target} {unit} target
-          </Text>
-        </View>
-
-        {isWater && (
-          <View style={styles.cupContainer}>
-            <View
-              style={[
-                styles.cupFill,
-                {
-                  height: `${progress * 100}%`,
-                  backgroundColor: `${colors.water}40`,
-                },
-              ]}
+            <HabitIcon
+              name={definition.icon}
+              size={22}
+              color={definition.color}
             />
           </View>
-        )}
 
-        {data.completed ? (
-          <View
-            style={[styles.checkmark, { backgroundColor: definition.color }]}
-          >
-            <HabitIcon name="checkmark" size={16} color="#fff" />
-          </View>
-        ) : (
-          <View style={styles.controls}>
-            <TouchableOpacity
-              style={[styles.controlButton, styles.decrementButton]}
-              onPress={handleDecrement}
-              disabled={localValue <= 0}
-              activeOpacity={0.7}
+          <View style={styles.textContainer}>
+            <Text
+              style={[styles.label, data.completed && styles.labelCompleted]}
             >
-              <HabitIcon
-                name="remove"
-                size={18}
-                color={localValue <= 0 ? colors.textTertiary : colors.textSecondary}
-              />
-            </TouchableOpacity>
-            <Text style={styles.valueText}>
-              {localValue}/{target}
+              {definition.label}
             </Text>
-            <TouchableOpacity
-              style={[
-                styles.controlButton,
-                { backgroundColor: `${definition.color}1A` },
-              ]}
-              onPress={handleIncrement}
-              activeOpacity={0.7}
-            >
-              <HabitIcon name="add" size={18} color={definition.color} />
-            </TouchableOpacity>
+            <Text style={styles.subtitle}>
+              {target} {unit} target
+            </Text>
           </View>
-        )}
-      </View>
-    </View>
+
+          {isWater && !data.completed && (
+            <View style={styles.cupContainer}>
+              <View
+                style={[
+                  styles.cupFill,
+                  {
+                    height: `${progress * 100}%`,
+                    backgroundColor: `${colors.water}40`,
+                  },
+                ]}
+              />
+            </View>
+          )}
+
+          {data.completed ? (
+            <>
+              <Text style={styles.undoLabel}>Undo</Text>
+              <View
+                style={[styles.checkmark, { backgroundColor: definition.color }]}
+              >
+                <HabitIcon name="checkmark" size={16} color="#fff" />
+              </View>
+            </>
+          ) : (
+            <View style={styles.controls}>
+              <TouchableOpacity
+                style={[styles.controlButton, styles.decrementButton]}
+                onPress={handleDecrement}
+                disabled={localValue <= 0}
+                activeOpacity={0.7}
+              >
+                <HabitIcon
+                  name="remove"
+                  size={18}
+                  color={localValue <= 0 ? colors.textTertiary : colors.textSecondary}
+                />
+              </TouchableOpacity>
+              <Text style={styles.valueText}>
+                {localValue}/{target}
+              </Text>
+              <TouchableOpacity
+                style={[
+                  styles.controlButton,
+                  { backgroundColor: `${definition.color}1A` },
+                ]}
+                onPress={handleIncrement}
+                activeOpacity={0.7}
+              >
+                <HabitIcon name="add" size={18} color={definition.color} />
+              </TouchableOpacity>
+            </View>
+          )}
+        </View>
+      </Animated.View>
+    </Pressable>
   );
 }
 
@@ -142,9 +229,18 @@ const styles = StyleSheet.create({
     padding: spacing.lg,
     borderWidth: 1,
     borderColor: colors.border,
+    overflow: 'hidden',
+    position: 'relative',
   },
   cardCompleted: {
     opacity: 0.7,
+  },
+  fillOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    bottom: 0,
+    borderRadius: borderRadius.md,
   },
   row: {
     flexDirection: 'row',
@@ -215,11 +311,17 @@ const styles = StyleSheet.create({
     minWidth: 40,
     textAlign: 'center',
   },
+  undoLabel: {
+    ...typography.xs,
+    color: colors.textTertiary,
+    marginRight: spacing.xs,
+  },
   checkmark: {
     width: 28,
     height: 28,
     borderRadius: 14,
     alignItems: 'center',
     justifyContent: 'center',
+    marginLeft: spacing.sm,
   },
 });

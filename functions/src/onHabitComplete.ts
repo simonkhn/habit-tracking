@@ -41,8 +41,8 @@ export const onHabitComplete = functions.firestore
     if (newlyCompleted.length === 0) return;
 
     const userId = after.userId;
+    console.log(`[onHabitComplete] User ${userId} completed: ${newlyCompleted.join(', ')}`);
 
-    // Get user profile to find partner
     const userDoc = await admin
       .firestore()
       .collection('users')
@@ -50,9 +50,11 @@ export const onHabitComplete = functions.firestore
       .get();
     const userData = userDoc.data();
 
-    if (!userData?.partnerId) return;
+    if (!userData?.partnerId) {
+      console.log('[onHabitComplete] No partnerId — skipping');
+      return;
+    }
 
-    // Get partner profile
     const partnerDoc = await admin
       .firestore()
       .collection('users')
@@ -60,15 +62,19 @@ export const onHabitComplete = functions.firestore
       .get();
     const partnerData = partnerDoc.data();
 
-    if (!partnerData?.expoPushToken) return;
-    if (!partnerData.notificationPreferences?.partnerCompletions) return;
+    if (!partnerData?.expoPushToken) {
+      console.log('[onHabitComplete] Partner has no push token — skipping');
+      return;
+    }
+    if (!partnerData.notificationPreferences?.partnerCompletions) {
+      console.log('[onHabitComplete] Partner has partnerCompletions disabled — skipping');
+      return;
+    }
 
-    // Send notification for each newly completed habit
     const messages: ExpoPushMessage[] = newlyCompleted.map((habitId) => {
       const label = HABIT_LABELS[habitId] || habitId;
       let body = `${userData.displayName} completed ${label}`;
 
-      // Include workout note if available
       if (habitId === 'workout' && after.habits.workout?.note) {
         body += `: ${after.habits.workout.note}`;
       }
@@ -82,8 +88,9 @@ export const onHabitComplete = functions.firestore
     });
 
     try {
-      await expo.sendPushNotificationsAsync(messages);
+      const tickets = await expo.sendPushNotificationsAsync(messages);
+      console.log(`[onHabitComplete] Sent ${messages.length} notification(s) to ${userData.partnerId}`, JSON.stringify(tickets));
     } catch (error) {
-      console.error('Error sending push notification:', error);
+      console.error('[onHabitComplete] Error sending push notification:', error);
     }
   });

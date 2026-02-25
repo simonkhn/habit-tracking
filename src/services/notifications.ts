@@ -2,6 +2,7 @@ import * as Notifications from 'expo-notifications';
 import * as Device from 'expo-device';
 import { Platform } from 'react-native';
 
+const BADGE_NOTIFICATION_ID = 'habit-badge';
 
 export async function registerForPushNotifications(): Promise<string | null> {
   if (!Device.isDevice) {
@@ -49,15 +50,26 @@ export async function cancelReminderById(identifier: string) {
   await Notifications.cancelScheduledNotificationAsync(identifier).catch(() => {});
 }
 
-export function setupNotificationHandler() {
+export async function setupNotificationHandler() {
+  await Notifications.setNotificationChannelAsync('habit-badge', {
+    name: 'Habit Progress',
+    importance: Notifications.AndroidImportance.MIN,
+    sound: undefined,
+    vibrationPattern: [],
+    showBadge: true,
+  });
+
   Notifications.setNotificationHandler({
-    handleNotification: async () => ({
-      shouldShowAlert: true,
-      shouldPlaySound: true,
-      shouldSetBadge: true,
-      shouldShowBanner: true,
-      shouldShowList: true,
-    }),
+    handleNotification: async (notification) => {
+      const isBadge = notification.request.identifier === BADGE_NOTIFICATION_ID;
+      return {
+        shouldShowAlert: !isBadge,
+        shouldPlaySound: !isBadge,
+        shouldSetBadge: true,
+        shouldShowBanner: !isBadge,
+        shouldShowList: true,
+      };
+    },
   });
 }
 
@@ -111,8 +123,25 @@ export async function scheduleHabitReminders(wakeUpTime: string) {
 }
 
 export async function updateHabitBadge(remaining: number) {
-  const success = await Notifications.setBadgeCountAsync(remaining);
-  if (!success) {
-    console.warn('[Badge] setBadgeCountAsync returned false — badge may not be supported on this launcher');
+  await Notifications.setBadgeCountAsync(remaining);
+
+  // On Android, badges require an active notification in the shade.
+  // Post (or update) a silent local notification to drive the badge count.
+  if (remaining > 0) {
+    await Notifications.scheduleNotificationAsync({
+      identifier: BADGE_NOTIFICATION_ID,
+      content: {
+        title: `${remaining} habit${remaining === 1 ? '' : 's'} remaining today`,
+        body: 'Tap to open your habits',
+        badge: remaining,
+        priority: Notifications.AndroidNotificationPriority.MIN,
+        sticky: true,
+        ...(Platform.OS === 'android' && { channelId: 'habit-badge' }),
+      },
+      trigger: null,
+    });
+  } else {
+    await Notifications.dismissNotificationAsync(BADGE_NOTIFICATION_ID).catch(() => {});
+    await Notifications.setBadgeCountAsync(0);
   }
 }

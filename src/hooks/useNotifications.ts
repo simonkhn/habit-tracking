@@ -3,8 +3,6 @@ import { useAuthStore } from '../stores/authStore';
 import { updateUserProfile } from '../services/auth';
 import {
   registerForPushNotifications,
-  scheduleLocalReminder,
-  scheduleHabitReminders,
   setupNotificationHandler,
   cancelReminderById,
 } from '../services/notifications';
@@ -30,37 +28,17 @@ export function useNotifications() {
     register();
   }, [user?.uid]);
 
-  // Schedule local reminders based on preferences and wake-up time
+  // Clean up any legacy local reminders (all reminders are now cloud-side)
   useEffect(() => {
     if (!profile) return;
 
-    async function scheduleReminders() {
-      // Cancel only specific known reminders (not all — that clears the badge on Samsung)
+    async function cleanupLegacyReminders() {
       await cancelReminderById('wake-up-reminder');
       await cancelReminderById('sunlight-reminder');
       await cancelReminderById('evening-reminder');
-      await cancelReminderById('morning-reminder'); // legacy
-
-      const prefs = profile!.notificationPreferences;
-
-      // Morning habit reminders tied to wake-up time
-      if (prefs.morningReminder) {
-        await scheduleHabitReminders(profile!.wakeUpTime);
-      }
-
-      // Evening reminder (local fallback — Cloud Function sends smart recap)
-      if (prefs.eveningReminder) {
-        const [hour, minute] = prefs.reminderTimes.evening.split(':').map(Number);
-        await scheduleLocalReminder(
-          'Evening check-in',
-          "Don't forget to finish your habits today!",
-          hour,
-          minute,
-          'evening-reminder'
-        );
-      }
+      await cancelReminderById('morning-reminder');
     }
 
-    scheduleReminders();
-  }, [profile?.notificationPreferences, profile?.wakeUpTime]);
+    cleanupLegacyReminders();
+  }, [profile]);
 }

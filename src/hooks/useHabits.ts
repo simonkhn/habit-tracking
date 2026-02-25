@@ -110,10 +110,11 @@ export function useHabits() {
   const completedCount = Object.values(habits).filter((h) => h.completed).length;
   const remaining = HABIT_ORDER.length - completedCount;
 
-  // Update app icon badge with remaining habit count
   useEffect(() => {
-    updateHabitBadge(remaining);
-  }, [remaining]);
+    if (!isLoading) {
+      updateHabitBadge(remaining);
+    }
+  }, [remaining, isLoading]);
 
   return {
     habits,

@@ -8,16 +8,19 @@ if (!admin.apps.length) {
 
 const expo = new Expo();
 
-function getTodayDateString(): string {
+function getTodayDateStringET(): string {
   const now = new Date();
-  const year = now.getFullYear();
-  const month = String(now.getMonth() + 1).padStart(2, '0');
-  const day = String(now.getDate()).padStart(2, '0');
-  return `${year}-${month}-${day}`;
+  const eastern = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'America/New_York',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).format(now);
+  return eastern;
 }
 
 async function checkWaterProgress(expectedProgress: number, nudgeMessage: string) {
-  const today = getTodayDateString();
+  const today = getTodayDateStringET();
   const usersSnapshot = await admin.firestore().collection('users').get();
 
   const messages: ExpoPushMessage[] = [];
