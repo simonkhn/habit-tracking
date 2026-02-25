@@ -2,8 +2,6 @@ import * as Notifications from 'expo-notifications';
 import * as Device from 'expo-device';
 import { Platform } from 'react-native';
 
-const PROGRESS_NOTIFICATION_ID = 'daily-habit-progress';
-const PROGRESS_CHANNEL_ID = 'habit-progress';
 
 export async function registerForPushNotifications(): Promise<string | null> {
   if (!Device.isDevice) {
@@ -53,37 +51,14 @@ export async function cancelAllReminders() {
 
 export function setupNotificationHandler() {
   Notifications.setNotificationHandler({
-    handleNotification: async (notification) => {
-      // Never show the progress badge notification as a popup/banner
-      if (notification.request.identifier === PROGRESS_NOTIFICATION_ID) {
-        return {
-          shouldShowAlert: false,
-          shouldPlaySound: false,
-          shouldSetBadge: true,
-          shouldShowBanner: false,
-          shouldShowList: true,
-        };
-      }
-      return {
-        shouldShowAlert: true,
-        shouldPlaySound: true,
-        shouldSetBadge: false,
-        shouldShowBanner: true,
-        shouldShowList: true,
-      };
-    },
+    handleNotification: async () => ({
+      shouldShowAlert: true,
+      shouldPlaySound: true,
+      shouldSetBadge: true,
+      shouldShowBanner: true,
+      shouldShowList: true,
+    }),
   });
-
-  if (Platform.OS === 'android') {
-    Notifications.setNotificationChannelAsync(PROGRESS_CHANNEL_ID, {
-      name: 'Habit Progress',
-      importance: Notifications.AndroidImportance.MIN,
-      sound: null,
-      vibrationPattern: [0],
-      showBadge: true,
-      lockscreenVisibility: Notifications.AndroidNotificationVisibility.PUBLIC,
-    });
-  }
 }
 
 export async function scheduleHabitReminders(wakeUpTime: string) {
@@ -135,22 +110,9 @@ export async function scheduleHabitReminders(wakeUpTime: string) {
   });
 }
 
-export async function updateHabitBadge(remaining: number, total: number) {
-  await Notifications.setBadgeCountAsync(remaining);
-
-  if (remaining <= 0) {
-    await Notifications.dismissNotificationAsync(PROGRESS_NOTIFICATION_ID).catch(() => {});
-    return;
+export async function updateHabitBadge(remaining: number) {
+  const success = await Notifications.setBadgeCountAsync(remaining);
+  if (!success) {
+    console.warn('[Badge] setBadgeCountAsync returned false — badge may not be supported on this launcher');
   }
-
-  await Notifications.scheduleNotificationAsync({
-    identifier: PROGRESS_NOTIFICATION_ID,
-    content: {
-      title: `${remaining} habit${remaining === 1 ? '' : 's'} left today`,
-      body: `${total - remaining}/${total} completed`,
-      badge: remaining,
-      sticky: true,
-    },
-    trigger: { channelId: PROGRESS_CHANNEL_ID },
-  });
 }

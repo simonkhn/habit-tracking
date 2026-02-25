@@ -110,11 +110,10 @@ export function useHabits() {
   const completedCount = Object.values(habits).filter((h) => h.completed).length;
   const remaining = HABIT_ORDER.length - completedCount;
 
-  // Update persistent notification + badge with remaining habit count
-  const total = HABIT_ORDER.length;
+  // Update app icon badge with remaining habit count
   useEffect(() => {
-    updateHabitBadge(remaining, total);
-  }, [remaining, total]);
+    updateHabitBadge(remaining);
+  }, [remaining]);
 
   return {
     habits,
