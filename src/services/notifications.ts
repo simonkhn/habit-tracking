@@ -45,8 +45,8 @@ export async function scheduleLocalReminder(
   });
 }
 
-export async function cancelAllReminders() {
-  await Notifications.cancelAllScheduledNotificationsAsync();
+export async function cancelReminderById(identifier: string) {
+  await Notifications.cancelScheduledNotificationAsync(identifier).catch(() => {});
 }
 
 export function setupNotificationHandler() {

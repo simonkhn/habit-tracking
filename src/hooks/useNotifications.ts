@@ -6,7 +6,7 @@ import {
   scheduleLocalReminder,
   scheduleHabitReminders,
   setupNotificationHandler,
-  cancelAllReminders,
+  cancelReminderById,
 } from '../services/notifications';
 
 export function useNotifications() {
@@ -35,7 +35,11 @@ export function useNotifications() {
     if (!profile) return;
 
     async function scheduleReminders() {
-      await cancelAllReminders();
+      // Cancel only specific known reminders (not all — that clears the badge on Samsung)
+      await cancelReminderById('wake-up-reminder');
+      await cancelReminderById('sunlight-reminder');
+      await cancelReminderById('evening-reminder');
+      await cancelReminderById('morning-reminder'); // legacy
 
       const prefs = profile!.notificationPreferences;
 
