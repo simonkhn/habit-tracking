@@ -4,6 +4,7 @@ import { updateUserProfile } from '../services/auth';
 import {
   registerForPushNotifications,
   scheduleLocalReminder,
+  scheduleHabitReminders,
   setupNotificationHandler,
   cancelAllReminders,
 } from '../services/notifications';
@@ -29,7 +30,7 @@ export function useNotifications() {
     register();
   }, [user?.uid]);
 
-  // Schedule local reminders based on preferences
+  // Schedule local reminders based on preferences and wake-up time
   useEffect(() => {
     if (!profile) return;
 
@@ -38,17 +39,12 @@ export function useNotifications() {
 
       const prefs = profile!.notificationPreferences;
 
+      // Morning habit reminders tied to wake-up time
       if (prefs.morningReminder) {
-        const [hour, minute] = prefs.reminderTimes.morning.split(':').map(Number);
-        await scheduleLocalReminder(
-          'Good morning!',
-          'Time to start your habits. You got this!',
-          hour,
-          minute,
-          'morning-reminder'
-        );
+        await scheduleHabitReminders(profile!.wakeUpTime);
       }
 
+      // Evening reminder (local fallback — Cloud Function sends smart recap)
       if (prefs.eveningReminder) {
         const [hour, minute] = prefs.reminderTimes.evening.split(':').map(Number);
         await scheduleLocalReminder(
@@ -62,5 +58,5 @@ export function useNotifications() {
     }
 
     scheduleReminders();
-  }, [profile?.notificationPreferences]);
+  }, [profile?.notificationPreferences, profile?.wakeUpTime]);
 }

@@ -1,7 +1,8 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
 import firestore from '@react-native-firebase/firestore';
 import { HabitLog, HabitId, DayHabits } from '../types/habit';
-import { createEmptyDayHabits } from '../config/habits';
+import { createEmptyDayHabits, HABIT_ORDER } from '../config/habits';
+import { updateHabitBadge } from '../services/notifications';
 import {
   getHabitLogRef,
   getOrCreateTodayLog,
@@ -107,6 +108,13 @@ export function useHabits() {
   );
 
   const completedCount = Object.values(habits).filter((h) => h.completed).length;
+  const remaining = HABIT_ORDER.length - completedCount;
+
+  // Update persistent notification + badge with remaining habit count
+  const total = HABIT_ORDER.length;
+  useEffect(() => {
+    updateHabitBadge(remaining, total);
+  }, [remaining, total]);
 
   return {
     habits,

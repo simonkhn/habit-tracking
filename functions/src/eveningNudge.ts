@@ -1,4 +1,4 @@
-import * as functions from 'firebase-functions';
+import * as functions from 'firebase-functions/v1';
 import * as admin from 'firebase-admin';
 import { Expo, ExpoPushMessage } from 'expo-server-sdk';
 
@@ -8,7 +8,17 @@ if (!admin.apps.length) {
 
 const expo = new Expo();
 
-const TOTAL_HABITS = 6;
+const HABIT_LABELS: Record<string, string> = {
+  wakeUpOnTime: 'Wake Up',
+  morningSunlight: 'Sunlight',
+  water: 'Water',
+  journal: 'Journal',
+  reading: 'Reading',
+  workout: 'Workout',
+  meditate: 'Meditate',
+};
+
+const ALL_HABIT_IDS = Object.keys(HABIT_LABELS);
 
 function getTodayDateString(): string {
   const now = new Date();
@@ -19,12 +29,11 @@ function getTodayDateString(): string {
 }
 
 export const eveningNudge = functions.pubsub
-  .schedule('0 21 * * *') // 9pm daily
+  .schedule('0 21 * * *')
   .timeZone('America/New_York')
   .onRun(async () => {
     const today = getTodayDateString();
 
-    // Get all users
     const usersSnapshot = await admin.firestore().collection('users').get();
 
     const messages: ExpoPushMessage[] = [];
@@ -35,7 +44,6 @@ export const eveningNudge = functions.pubsub
       if (!userData.expoPushToken) continue;
       if (!userData.notificationPreferences?.streakNudge) continue;
 
-      // Check today's log
       const logId = `${userDoc.id}_${today}`;
       const logDoc = await admin
         .firestore()
@@ -44,12 +52,11 @@ export const eveningNudge = functions.pubsub
         .get();
 
       if (!logDoc.exists) {
-        // No log at all — remind them
         messages.push({
           to: userData.expoPushToken,
           sound: 'default',
           title: 'Evening check-in',
-          body: `You haven't logged any habits today. Keep the streak alive!`,
+          body: "You haven't logged any habits today. There's still time!",
         });
         continue;
       }
@@ -57,18 +64,30 @@ export const eveningNudge = functions.pubsub
       const logData = logDoc.data();
       if (!logData?.habits) continue;
 
-      const completedCount = Object.values(logData.habits).filter(
-        (h: any) => h.completed
-      ).length;
+      // Build list of incomplete habits with details
+      const incomplete: string[] = [];
+      for (const habitId of ALL_HABIT_IDS) {
+        const habit = logData.habits[habitId];
+        if (habit?.completed) continue;
 
-      const remaining = TOTAL_HABITS - completedCount;
+        if (habitId === 'water') {
+          const currentOz = habit?.currentOz || 0;
+          const target = userData.waterTargetOz || 80;
+          incomplete.push(`Water (${currentOz}/${target}oz)`);
+        } else if (habitId === 'reading') {
+          const pages = habit?.pagesRead || 0;
+          incomplete.push(pages > 0 ? `Reading (${pages}/10 pages)` : 'Reading');
+        } else {
+          incomplete.push(HABIT_LABELS[habitId] || habitId);
+        }
+      }
 
-      if (remaining > 0) {
+      if (incomplete.length > 0) {
         messages.push({
           to: userData.expoPushToken,
           sound: 'default',
-          title: 'Evening check-in',
-          body: `You have ${remaining} habit${remaining === 1 ? '' : 's'} left today. Keep the streak alive!`,
+          title: `${incomplete.length} habit${incomplete.length === 1 ? '' : 's'} left tonight`,
+          body: `Still to go: ${incomplete.join(', ')}`,
         });
       }
     }
