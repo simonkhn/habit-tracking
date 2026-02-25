@@ -53,8 +53,8 @@ export default function TodayScreen() {
 
   // Sort habits: incomplete first, completed last
   const sortedHabits = [...HABIT_ORDER].sort((a, b) => {
-    const aComplete = habits[a].completed ? 1 : 0;
-    const bComplete = habits[b].completed ? 1 : 0;
+    const aComplete = habits[a]?.completed ? 1 : 0;
+    const bComplete = habits[b]?.completed ? 1 : 0;
     return aComplete - bComplete;
   });
 
