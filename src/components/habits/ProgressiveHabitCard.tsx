@@ -3,8 +3,6 @@ import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import { HabitDefinition, WaterHabitData, ReadingHabitData } from '../../types/habit';
 import { HabitIcon } from './HabitIcon';
-import { ProgressBar } from '../ui/ProgressBar';
-import { WaterFillVisual } from './WaterFillVisual';
 import { WATER_INCREMENT_OZ, READING_TARGET_PAGES } from '../../config/habits';
 import { useAuthStore } from '../../stores/authStore';
 import { colors, typography, fontWeights, spacing, borderRadius } from '../../theme';
@@ -27,10 +25,8 @@ export function ProgressiveHabitCard({
     ? (data as WaterHabitData).currentOz
     : (data as ReadingHabitData).pagesRead;
 
-  // Optimistic local state for instant tap feedback
   const [localValue, setLocalValue] = useState(currentValue);
 
-  // Sync local state when external data arrives (e.g. Firestore snapshot)
   useEffect(() => {
     setLocalValue(currentValue);
   }, [currentValue]);
@@ -38,12 +34,12 @@ export function ProgressiveHabitCard({
   const target = isWater ? (profile?.waterTargetOz ?? 80) : READING_TARGET_PAGES;
   const increment = isWater ? WATER_INCREMENT_OZ : 1;
   const unit = isWater ? 'oz' : 'pages';
-  const progress = target > 0 ? localValue / target : 0;
+  const progress = target > 0 ? Math.min(localValue / target, 1) : 0;
 
   const handleIncrement = useCallback(() => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     const newValue = localValue + increment;
-    setLocalValue(newValue); // Instant visual update
+    setLocalValue(newValue);
     if (!data.completed && newValue >= target) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     }
@@ -54,81 +50,86 @@ export function ProgressiveHabitCard({
     if (localValue <= 0) return;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     const newValue = localValue - increment;
-    setLocalValue(newValue); // Instant visual update
+    setLocalValue(newValue);
     onUpdate(newValue);
   }, [localValue, increment, onUpdate]);
 
   return (
     <View style={[styles.card, data.completed && styles.cardCompleted]}>
-      <View style={styles.header}>
-        <View style={styles.headerLeft}>
-          <View
-            style={[
-              styles.iconContainer,
-              { backgroundColor: `${definition.color}1A` },
-            ]}
+      <View style={styles.row}>
+        <View
+          style={[
+            styles.iconContainer,
+            { backgroundColor: `${definition.color}1A` },
+          ]}
+        >
+          <HabitIcon
+            name={definition.icon}
+            size={22}
+            color={definition.color}
+          />
+        </View>
+
+        <View style={styles.textContainer}>
+          <Text
+            style={[styles.label, data.completed && styles.labelCompleted]}
           >
-            <HabitIcon
-              name={definition.icon}
-              size={22}
-              color={definition.color}
+            {definition.label}
+          </Text>
+          <Text style={styles.subtitle}>
+            {target} {unit} target
+          </Text>
+        </View>
+
+        {isWater && (
+          <View style={styles.cupContainer}>
+            <View
+              style={[
+                styles.cupFill,
+                {
+                  height: `${progress * 100}%`,
+                  backgroundColor: `${colors.water}40`,
+                },
+              ]}
             />
           </View>
-          <View>
-            <Text
-              style={[styles.label, data.completed && styles.labelCompleted]}
-            >
-              {definition.label}
-            </Text>
-            <Text style={styles.valueText}>
-              {localValue} / {target} {unit}
-            </Text>
-          </View>
-        </View>
-        {data.completed && (
+        )}
+
+        {data.completed ? (
           <View
             style={[styles.checkmark, { backgroundColor: definition.color }]}
           >
             <HabitIcon name="checkmark" size={16} color="#fff" />
           </View>
+        ) : (
+          <View style={styles.controls}>
+            <TouchableOpacity
+              style={[styles.controlButton, styles.decrementButton]}
+              onPress={handleDecrement}
+              disabled={localValue <= 0}
+              activeOpacity={0.7}
+            >
+              <HabitIcon
+                name="remove"
+                size={18}
+                color={localValue <= 0 ? colors.textTertiary : colors.textSecondary}
+              />
+            </TouchableOpacity>
+            <Text style={styles.valueText}>
+              {localValue}/{target}
+            </Text>
+            <TouchableOpacity
+              style={[
+                styles.controlButton,
+                { backgroundColor: `${definition.color}1A` },
+              ]}
+              onPress={handleIncrement}
+              activeOpacity={0.7}
+            >
+              <HabitIcon name="add" size={18} color={definition.color} />
+            </TouchableOpacity>
+          </View>
         )}
-      </View>
-
-      {isWater && (
-        <View style={styles.waterVisual}>
-          <WaterFillVisual progress={progress} height={60} />
-        </View>
-      )}
-
-      <ProgressBar
-        progress={progress}
-        color={definition.color}
-        style={styles.progressBar}
-      />
-
-      <View style={styles.controls}>
-        <TouchableOpacity
-          style={[styles.controlButton, styles.decrementButton]}
-          onPress={handleDecrement}
-          disabled={localValue <= 0}
-          activeOpacity={0.7}
-        >
-          <HabitIcon
-            name="remove"
-            size={20}
-            color={localValue <= 0 ? colors.textTertiary : colors.textSecondary}
-          />
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[
-            styles.controlButton,
-            { backgroundColor: `${definition.color}1A` },
-          ]}
-          onPress={handleIncrement}
-          activeOpacity={0.7}
-        >
-          <HabitIcon name="add" size={20} color={definition.color} />
-        </TouchableOpacity>
       </View>
     </View>
   );
@@ -145,12 +146,7 @@ const styles = StyleSheet.create({
   cardCompleted: {
     opacity: 0.7,
   },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  headerLeft: {
+  row: {
     flexDirection: 'row',
     alignItems: 'center',
   },
@@ -162,6 +158,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginRight: spacing.md,
   },
+  textContainer: {
+    flex: 1,
+  },
   label: {
     ...typography.base,
     fontWeight: fontWeights.semibold,
@@ -171,10 +170,50 @@ const styles = StyleSheet.create({
     textDecorationLine: 'line-through',
     color: colors.textTertiary,
   },
+  subtitle: {
+    ...typography.sm,
+    color: colors.textTertiary,
+    marginTop: 2,
+  },
+  cupContainer: {
+    width: 24,
+    height: 32,
+    borderRadius: 4,
+    borderBottomLeftRadius: 8,
+    borderBottomRightRadius: 8,
+    borderWidth: 1.5,
+    borderColor: `${colors.water}60`,
+    overflow: 'hidden',
+    justifyContent: 'flex-end',
+    marginRight: spacing.sm,
+  },
+  cupFill: {
+    width: '100%',
+    borderBottomLeftRadius: 6,
+    borderBottomRightRadius: 6,
+  },
+  controls: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  controlButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.background,
+  },
+  decrementButton: {
+    backgroundColor: colors.background,
+  },
   valueText: {
     ...typography.sm,
+    fontWeight: fontWeights.medium,
     color: colors.textSecondary,
-    marginTop: 2,
+    minWidth: 40,
+    textAlign: 'center',
   },
   checkmark: {
     width: 28,
@@ -182,28 +221,5 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  waterVisual: {
-    marginTop: spacing.md,
-  },
-  progressBar: {
-    marginTop: spacing.md,
-  },
-  controls: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    gap: spacing.md,
-    marginTop: spacing.md,
-  },
-  controlButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.background,
-  },
-  decrementButton: {
-    backgroundColor: colors.background,
   },
 });

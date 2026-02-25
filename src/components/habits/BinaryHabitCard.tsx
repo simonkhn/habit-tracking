@@ -21,12 +21,15 @@ interface BinaryHabitCardProps {
 const HOLD_DURATION = 500;
 
 export function BinaryHabitCard({ definition, data, onToggle }: BinaryHabitCardProps) {
+  const completed = data?.completed ?? false;
   const fillProgress = useSharedValue(0);
   const cardScale = useSharedValue(1);
   const holdTimer = useRef<NodeJS.Timeout | null>(null);
   const isHolding = useRef(false);
+  const justCompleted = useRef(false);
 
   const triggerComplete = useCallback(() => {
+    justCompleted.current = true;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     onToggle();
     fillProgress.value = withTiming(0, { duration: 200 });
@@ -34,7 +37,7 @@ export function BinaryHabitCard({ definition, data, onToggle }: BinaryHabitCardP
   }, [onToggle]);
 
   const handlePressIn = useCallback(() => {
-    if (data.completed) return;
+    if (completed) return;
     isHolding.current = true;
     cardScale.value = withTiming(0.97, { duration: 100 });
     fillProgress.value = withTiming(1, { duration: HOLD_DURATION });
@@ -44,7 +47,7 @@ export function BinaryHabitCard({ definition, data, onToggle }: BinaryHabitCardP
         runOnJS(triggerComplete)();
       }
     }, HOLD_DURATION);
-  }, [data.completed, triggerComplete]);
+  }, [completed, triggerComplete]);
 
   const handlePressOut = useCallback(() => {
     isHolding.current = false;
@@ -52,18 +55,23 @@ export function BinaryHabitCard({ definition, data, onToggle }: BinaryHabitCardP
       clearTimeout(holdTimer.current);
       holdTimer.current = null;
     }
-    if (!data.completed) {
+    if (!completed) {
       fillProgress.value = withTiming(0, { duration: 150 });
     }
     cardScale.value = withSpring(1);
-  }, [data.completed]);
+  }, [completed]);
 
   const handleTap = useCallback(() => {
-    if (data.completed) {
+    // Ignore tap right after hold-to-complete to prevent double-toggle
+    if (justCompleted.current) {
+      justCompleted.current = false;
+      return;
+    }
+    if (completed) {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
       onToggle();
     }
-  }, [data.completed, onToggle]);
+  }, [completed, onToggle]);
 
   const fillStyle = useAnimatedStyle(() => ({
     width: `${fillProgress.value * 100}%`,
@@ -83,7 +91,7 @@ export function BinaryHabitCard({ definition, data, onToggle }: BinaryHabitCardP
       <Animated.View
         style={[
           styles.card,
-          data.completed && styles.cardCompleted,
+          completed && styles.cardCompleted,
           cardAnimStyle,
         ]}
       >
@@ -105,14 +113,14 @@ export function BinaryHabitCard({ definition, data, onToggle }: BinaryHabitCardP
             <Text
               style={[
                 styles.label,
-                data.completed && styles.labelCompleted,
+                completed && styles.labelCompleted,
               ]}
             >
               {definition.label}
             </Text>
             <Text style={styles.description}>{definition.description}</Text>
           </View>
-          {data.completed && (
+          {completed && (
             <>
               <Text style={styles.undoLabel}>Undo</Text>
               <View

@@ -42,18 +42,23 @@ export function useHabits() {
 
   const habits: DayHabits = { ...createEmptyDayHabits(), ...log?.habits };
 
+  // Keep a ref to latest habits so toggleBinaryHabit never reads stale data
+  const habitsRef = useRef(habits);
+  habitsRef.current = habits;
+
   const toggleBinaryHabit = useCallback(
     async (habitId: HabitId) => {
       if (!userId) return;
-      const current = habits[habitId];
-      const nowCompleted = !current.completed;
+      const current = habitsRef.current[habitId];
+      const nowCompleted = !current?.completed;
+      console.log(`[TOGGLE] ${habitId}: was=${current?.completed}, now=${nowCompleted}`);
 
       await updateHabitData(userId, date, habitId, {
         completed: nowCompleted,
         completedAt: nowCompleted ? firestore.Timestamp.now() : null,
       });
     },
-    [userId, date, habits]
+    [userId, date]
   );
 
   const updateWater = useCallback(

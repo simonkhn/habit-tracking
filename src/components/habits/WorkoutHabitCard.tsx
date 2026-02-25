@@ -1,5 +1,5 @@
 import React, { useCallback, useRef, useState, useEffect } from 'react';
-import { View, Text, TextInput, StyleSheet, Pressable } from 'react-native';
+import { View, Text, TextInput, StyleSheet, Pressable, Modal, KeyboardAvoidingView, Platform } from 'react-native';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -20,31 +20,42 @@ interface WorkoutHabitCardProps {
 }
 
 const HOLD_DURATION = 500;
-const DEBOUNCE_MS = 1000;
 
 export function WorkoutHabitCard({ definition, data, onToggle, onSaveNote }: WorkoutHabitCardProps) {
+  const completed = data?.completed ?? false;
   const fillProgress = useSharedValue(0);
   const cardScale = useSharedValue(1);
   const holdTimer = useRef<NodeJS.Timeout | null>(null);
   const isHolding = useRef(false);
-  const debounceTimer = useRef<NodeJS.Timeout | null>(null);
-  const [noteText, setNoteText] = useState(data.note ?? '');
-  const textInputRef = useRef<TextInput>(null);
-
-  // Keep local state in sync when data.note changes externally
-  useEffect(() => {
-    setNoteText(data.note ?? '');
-  }, [data.note]);
+  const justCompleted = useRef(false);
+  const [showNoteModal, setShowNoteModal] = useState(false);
+  const [noteText, setNoteText] = useState('');
 
   const triggerComplete = useCallback(() => {
+    justCompleted.current = true;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    onToggle();
     fillProgress.value = withTiming(0, { duration: 200 });
     cardScale.value = withSpring(1);
+    setShowNoteModal(true);
+  }, []);
+
+  const handleSubmitNote = useCallback(() => {
+    if (noteText.trim()) {
+      onSaveNote(noteText.trim());
+    }
+    onToggle();
+    setShowNoteModal(false);
+    setNoteText('');
+  }, [noteText, onSaveNote, onToggle]);
+
+  const handleSkipNote = useCallback(() => {
+    onToggle();
+    setShowNoteModal(false);
+    setNoteText('');
   }, [onToggle]);
 
   const handlePressIn = useCallback(() => {
-    if (data.completed) return;
+    if (completed) return;
     isHolding.current = true;
     cardScale.value = withTiming(0.97, { duration: 100 });
     fillProgress.value = withTiming(1, { duration: HOLD_DURATION });
@@ -54,7 +65,7 @@ export function WorkoutHabitCard({ definition, data, onToggle, onSaveNote }: Wor
         runOnJS(triggerComplete)();
       }
     }, HOLD_DURATION);
-  }, [data.completed, triggerComplete]);
+  }, [completed, triggerComplete]);
 
   const handlePressOut = useCallback(() => {
     isHolding.current = false;
@@ -62,59 +73,26 @@ export function WorkoutHabitCard({ definition, data, onToggle, onSaveNote }: Wor
       clearTimeout(holdTimer.current);
       holdTimer.current = null;
     }
-    if (!data.completed) {
+    if (!completed) {
       fillProgress.value = withTiming(0, { duration: 150 });
     }
     cardScale.value = withSpring(1);
-  }, [data.completed]);
+  }, [completed]);
 
   const handleTap = useCallback(() => {
-    if (data.completed) {
+    if (justCompleted.current) {
+      justCompleted.current = false;
+      return;
+    }
+    if (completed) {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
       onToggle();
     }
-  }, [data.completed, onToggle]);
-
-  const saveNote = useCallback(
-    (text: string) => {
-      onSaveNote(text);
-    },
-    [onSaveNote],
-  );
-
-  const handleNoteChange = useCallback(
-    (text: string) => {
-      setNoteText(text);
-      if (debounceTimer.current) {
-        clearTimeout(debounceTimer.current);
-      }
-      debounceTimer.current = setTimeout(() => {
-        saveNote(text);
-      }, DEBOUNCE_MS);
-    },
-    [saveNote],
-  );
-
-  const handleNoteBlur = useCallback(() => {
-    if (debounceTimer.current) {
-      clearTimeout(debounceTimer.current);
-      debounceTimer.current = null;
-    }
-    saveNote(noteText);
-  }, [noteText, saveNote]);
-
-  // Clean up debounce timer on unmount
-  useEffect(() => {
-    return () => {
-      if (debounceTimer.current) {
-        clearTimeout(debounceTimer.current);
-      }
-    };
-  }, []);
+  }, [completed, onToggle]);
 
   const fillStyle = useAnimatedStyle(() => ({
     width: `${fillProgress.value * 100}%`,
-    backgroundColor: `${definition.color}26`, // 15% opacity
+    backgroundColor: `${definition.color}26`,
   }));
 
   const cardAnimStyle = useAnimatedStyle(() => ({
@@ -122,72 +100,104 @@ export function WorkoutHabitCard({ definition, data, onToggle, onSaveNote }: Wor
   }));
 
   return (
-    <Pressable
-      onPressIn={handlePressIn}
-      onPressOut={handlePressOut}
-      onPress={handleTap}
-    >
-      <Animated.View
-        style={[
-          styles.card,
-          data.completed && styles.cardCompleted,
-          cardAnimStyle,
-        ]}
+    <>
+      <Pressable
+        onPressIn={handlePressIn}
+        onPressOut={handlePressOut}
+        onPress={handleTap}
       >
-        <Animated.View style={[styles.fillOverlay, fillStyle]} />
-        <View style={styles.row}>
-          <View
-            style={[
-              styles.iconContainer,
-              { backgroundColor: `${definition.color}1A` },
-            ]}
-          >
-            <HabitIcon
-              name={definition.icon}
-              size={22}
-              color={definition.color}
-            />
-          </View>
-          <View style={styles.textContainer}>
-            <Text
-              style={[
-                styles.label,
-                data.completed && styles.labelCompleted,
-              ]}
-            >
-              {definition.label}
-            </Text>
-            <Text style={styles.description}>{definition.description}</Text>
-          </View>
-          {data.completed && (
+        <Animated.View
+          style={[
+            styles.card,
+            completed && styles.cardCompleted,
+            cardAnimStyle,
+          ]}
+        >
+          <Animated.View style={[styles.fillOverlay, fillStyle]} />
+          <View style={styles.row}>
             <View
               style={[
-                styles.checkmark,
-                { backgroundColor: definition.color },
+                styles.iconContainer,
+                { backgroundColor: `${definition.color}1A` },
               ]}
             >
-              <HabitIcon name="checkmark" size={16} color="#fff" />
+              <HabitIcon
+                name={definition.icon}
+                size={22}
+                color={definition.color}
+              />
             </View>
-          )}
-        </View>
-        {data.completed && (
-          <View style={styles.noteRow}>
+            <View style={styles.textContainer}>
+              <Text
+                style={[
+                  styles.label,
+                  completed && styles.labelCompleted,
+                ]}
+              >
+                {definition.label}
+              </Text>
+              <Text style={styles.description}>{definition.description}</Text>
+            </View>
+            {completed && (
+              <View
+                style={[
+                  styles.checkmark,
+                  { backgroundColor: definition.color },
+                ]}
+              >
+                <HabitIcon name="checkmark" size={16} color="#fff" />
+              </View>
+            )}
+          </View>
+          {completed && data?.note ? (
+            <View style={styles.notePreview}>
+              <Text style={styles.notePreviewText} numberOfLines={1}>
+                {data.note}
+              </Text>
+            </View>
+          ) : null}
+        </Animated.View>
+      </Pressable>
+
+      <Modal
+        visible={showNoteModal}
+        transparent
+        animationType="slide"
+        onRequestClose={handleSkipNote}
+      >
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          style={styles.modalOverlay}
+        >
+          <Pressable style={styles.modalBackdrop} onPress={handleSkipNote} />
+          <View style={styles.modalCard}>
+            <Text style={styles.modalTitle}>What did you do?</Text>
             <TextInput
-              ref={textInputRef}
-              style={styles.noteInput}
+              style={styles.modalInput}
               value={noteText}
-              onChangeText={handleNoteChange}
-              onBlur={handleNoteBlur}
-              placeholder="What did you do?"
+              onChangeText={setNoteText}
+              placeholder="Ran 3 miles..."
               placeholderTextColor={colors.textTertiary}
               maxLength={120}
+              autoFocus
               returnKeyType="done"
-              blurOnSubmit
+              onSubmitEditing={handleSubmitNote}
             />
+            <View style={styles.modalButtons}>
+              <Pressable style={styles.skipButton} onPress={handleSkipNote}>
+                <Text style={styles.skipButtonText}>Skip</Text>
+              </Pressable>
+              <Pressable
+                style={[styles.doneButton, { backgroundColor: definition.color }]}
+                onPress={handleSubmitNote}
+              >
+                <Text style={styles.doneButtonText}>Done</Text>
+              </Pressable>
+            </View>
           </View>
-        )}
-      </Animated.View>
-    </Pressable>
+        </KeyboardAvoidingView>
+      </Modal>
+    </>
   );
 }
 
@@ -248,16 +258,71 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginLeft: spacing.sm,
   },
-  noteRow: {
+  notePreview: {
     marginTop: spacing.sm,
-    marginLeft: 40 + spacing.md, // align with text, past the icon
+    marginLeft: 40 + spacing.md,
   },
-  noteInput: {
+  notePreviewText: {
     ...typography.sm,
+    color: colors.textSecondary,
+    fontStyle: 'italic',
+  },
+  modalOverlay: {
+    flex: 1,
+    justifyContent: 'flex-end',
+  },
+  modalBackdrop: {
+    flex: 1,
+  },
+  modalCard: {
+    backgroundColor: colors.surface,
+    borderTopLeftRadius: borderRadius.lg,
+    borderTopRightRadius: borderRadius.lg,
+    padding: spacing.xl,
+    paddingBottom: spacing.xxl,
+    borderTopWidth: 1,
+    borderColor: colors.border,
+  },
+  modalTitle: {
+    ...typography.lg,
+    fontWeight: fontWeights.semibold,
     color: colors.textPrimary,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-    paddingVertical: 4,
-    paddingHorizontal: 0,
+    marginBottom: spacing.md,
+  },
+  modalInput: {
+    ...typography.base,
+    color: colors.textPrimary,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: borderRadius.sm,
+    padding: spacing.md,
+    marginBottom: spacing.lg,
+  },
+  modalButtons: {
+    flexDirection: 'row',
+    gap: spacing.md,
+  },
+  skipButton: {
+    flex: 1,
+    paddingVertical: spacing.md,
+    borderRadius: borderRadius.sm,
+    backgroundColor: colors.background,
+    alignItems: 'center',
+  },
+  skipButtonText: {
+    ...typography.base,
+    fontWeight: fontWeights.medium,
+    color: colors.textSecondary,
+  },
+  doneButton: {
+    flex: 1,
+    paddingVertical: spacing.md,
+    borderRadius: borderRadius.sm,
+    alignItems: 'center',
+  },
+  doneButtonText: {
+    ...typography.base,
+    fontWeight: fontWeights.semibold,
+    color: '#FFFFFF',
   },
 });
