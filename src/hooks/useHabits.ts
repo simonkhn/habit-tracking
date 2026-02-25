@@ -93,16 +93,10 @@ export function useHabits() {
     [userId, date]
   );
 
-  const saveJournal = useCallback(
-    async (text: string) => {
+  const saveWorkoutNote = useCallback(
+    (note: string) => {
       if (!userId) return;
-      const completed = text.trim().length >= 10 && /[.!?]$/.test(text.trim());
-
-      await updateHabitData(userId, date, 'journal', {
-        text,
-        completed,
-        completedAt: completed ? firestore.Timestamp.now() : null,
-      });
+      updateHabitData(userId, date, 'workout', { note });
     },
     [userId, date]
   );
@@ -117,6 +111,6 @@ export function useHabits() {
     toggleBinaryHabit,
     updateWater,
     updateReading,
-    saveJournal,
+    saveWorkoutNote,
   };
 }

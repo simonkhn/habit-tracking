@@ -49,6 +49,12 @@ export default {
         projectId: "83d8b2dc-e996-4fad-aaa1-aabdf11391b6",
       },
     },
+    runtimeVersion: {
+      policy: "appVersion",
+    },
+    updates: {
+      url: "https://u.expo.dev/83d8b2dc-e996-4fad-aaa1-aabdf11391b6",
+    },
     owner: "simonsaysbuild",
   },
 };

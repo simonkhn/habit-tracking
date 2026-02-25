@@ -15,6 +15,7 @@ const HABIT_LABELS: Record<string, string> = {
   journal: 'Journal',
   reading: 'Read',
   workout: 'Workout',
+  meditate: 'Meditate',
 };
 
 export const onHabitComplete = functions.firestore
@@ -63,12 +64,22 @@ export const onHabitComplete = functions.firestore
     if (!partnerData.notificationPreferences?.partnerCompletions) return;
 
     // Send notification for each newly completed habit
-    const messages: ExpoPushMessage[] = newlyCompleted.map((habitId) => ({
-      to: partnerData.expoPushToken,
-      sound: 'default' as const,
-      title: `${userData.displayName} completed a habit!`,
-      body: `${userData.displayName} completed ${HABIT_LABELS[habitId] || habitId}`,
-    }));
+    const messages: ExpoPushMessage[] = newlyCompleted.map((habitId) => {
+      const label = HABIT_LABELS[habitId] || habitId;
+      let body = `${userData.displayName} completed ${label}`;
+
+      // Include workout note if available
+      if (habitId === 'workout' && after.habits.workout?.note) {
+        body += `: ${after.habits.workout.note}`;
+      }
+
+      return {
+        to: partnerData.expoPushToken,
+        sound: 'default' as const,
+        title: `${userData.displayName} completed a habit!`,
+        body,
+      };
+    });
 
     try {
       await expo.sendPushNotificationsAsync(messages);

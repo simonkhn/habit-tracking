@@ -29,10 +29,10 @@ export const HABIT_DEFINITIONS: HabitDefinition[] = [
   {
     id: 'journal',
     label: 'Journal',
-    type: 'journal',
+    type: 'binary',
     color: colors.journal,
     icon: 'book-outline',
-    description: '1+ sentence in-app',
+    description: 'Write in your journal',
   },
   {
     id: 'reading',
@@ -45,10 +45,18 @@ export const HABIT_DEFINITIONS: HabitDefinition[] = [
   {
     id: 'workout',
     label: 'Workout',
-    type: 'binary',
+    type: 'binary-with-note',
     color: colors.workout,
     icon: 'fitness-outline',
     description: '30+ min, honor system',
+  },
+  {
+    id: 'meditate',
+    label: 'Meditate',
+    type: 'binary',
+    color: colors.meditate,
+    icon: 'leaf-outline',
+    description: 'Honor system',
   },
 ];
 
@@ -59,6 +67,7 @@ export const HABIT_ORDER: HabitId[] = [
   'journal',
   'reading',
   'workout',
+  'meditate',
 ];
 
 export const WATER_INCREMENT_OZ = 8;
@@ -75,8 +84,9 @@ export function createEmptyDayHabits(): DayHabits {
     wakeUpOnTime: { completed: false, completedAt: null },
     morningSunlight: { completed: false, completedAt: null },
     water: { completed: false, completedAt: null, currentOz: 0 },
-    journal: { completed: false, completedAt: null, text: '' },
+    journal: { completed: false, completedAt: null },
     reading: { completed: false, completedAt: null, pagesRead: 0 },
-    workout: { completed: false, completedAt: null },
+    workout: { completed: false, completedAt: null, note: '' },
+    meditate: { completed: false, completedAt: null },
   };
 }

@@ -1,5 +1,5 @@
-import React, { useCallback, useRef } from 'react';
-import { View, Text, StyleSheet, Pressable } from 'react-native';
+import React, { useCallback, useRef, useState, useEffect } from 'react';
+import { View, Text, TextInput, StyleSheet, Pressable } from 'react-native';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -8,23 +8,33 @@ import Animated, {
   runOnJS,
 } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
-import { HabitDefinition, HabitData } from '../../types/habit';
+import { HabitDefinition, WorkoutHabitData } from '../../types/habit';
 import { HabitIcon } from './HabitIcon';
 import { colors, typography, fontWeights, spacing, borderRadius } from '../../theme';
 
-interface BinaryHabitCardProps {
+interface WorkoutHabitCardProps {
   definition: HabitDefinition;
-  data: HabitData;
+  data: WorkoutHabitData;
   onToggle: () => void;
+  onSaveNote: (note: string) => void;
 }
 
 const HOLD_DURATION = 500;
+const DEBOUNCE_MS = 1000;
 
-export function BinaryHabitCard({ definition, data, onToggle }: BinaryHabitCardProps) {
+export function WorkoutHabitCard({ definition, data, onToggle, onSaveNote }: WorkoutHabitCardProps) {
   const fillProgress = useSharedValue(0);
   const cardScale = useSharedValue(1);
   const holdTimer = useRef<NodeJS.Timeout | null>(null);
   const isHolding = useRef(false);
+  const debounceTimer = useRef<NodeJS.Timeout | null>(null);
+  const [noteText, setNoteText] = useState(data.note ?? '');
+  const textInputRef = useRef<TextInput>(null);
+
+  // Keep local state in sync when data.note changes externally
+  useEffect(() => {
+    setNoteText(data.note ?? '');
+  }, [data.note]);
 
   const triggerComplete = useCallback(() => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
@@ -64,6 +74,43 @@ export function BinaryHabitCard({ definition, data, onToggle }: BinaryHabitCardP
       onToggle();
     }
   }, [data.completed, onToggle]);
+
+  const saveNote = useCallback(
+    (text: string) => {
+      onSaveNote(text);
+    },
+    [onSaveNote],
+  );
+
+  const handleNoteChange = useCallback(
+    (text: string) => {
+      setNoteText(text);
+      if (debounceTimer.current) {
+        clearTimeout(debounceTimer.current);
+      }
+      debounceTimer.current = setTimeout(() => {
+        saveNote(text);
+      }, DEBOUNCE_MS);
+    },
+    [saveNote],
+  );
+
+  const handleNoteBlur = useCallback(() => {
+    if (debounceTimer.current) {
+      clearTimeout(debounceTimer.current);
+      debounceTimer.current = null;
+    }
+    saveNote(noteText);
+  }, [noteText, saveNote]);
+
+  // Clean up debounce timer on unmount
+  useEffect(() => {
+    return () => {
+      if (debounceTimer.current) {
+        clearTimeout(debounceTimer.current);
+      }
+    };
+  }, []);
 
   const fillStyle = useAnimatedStyle(() => ({
     width: `${fillProgress.value * 100}%`,
@@ -113,19 +160,32 @@ export function BinaryHabitCard({ definition, data, onToggle }: BinaryHabitCardP
             <Text style={styles.description}>{definition.description}</Text>
           </View>
           {data.completed && (
-            <>
-              <Text style={styles.undoLabel}>Undo</Text>
-              <View
-                style={[
-                  styles.checkmark,
-                  { backgroundColor: definition.color },
-                ]}
-              >
-                <HabitIcon name="checkmark" size={16} color="#fff" />
-              </View>
-            </>
+            <View
+              style={[
+                styles.checkmark,
+                { backgroundColor: definition.color },
+              ]}
+            >
+              <HabitIcon name="checkmark" size={16} color="#fff" />
+            </View>
           )}
         </View>
+        {data.completed && (
+          <View style={styles.noteRow}>
+            <TextInput
+              ref={textInputRef}
+              style={styles.noteInput}
+              value={noteText}
+              onChangeText={handleNoteChange}
+              onBlur={handleNoteBlur}
+              placeholder="What did you do?"
+              placeholderTextColor={colors.textTertiary}
+              maxLength={120}
+              returnKeyType="done"
+              blurOnSubmit
+            />
+          </View>
+        )}
       </Animated.View>
     </Pressable>
   );
@@ -180,11 +240,6 @@ const styles = StyleSheet.create({
     color: colors.textTertiary,
     marginTop: 2,
   },
-  undoLabel: {
-    ...typography.xs,
-    color: colors.textTertiary,
-    marginRight: spacing.xs,
-  },
   checkmark: {
     width: 28,
     height: 28,
@@ -192,5 +247,17 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginLeft: spacing.sm,
+  },
+  noteRow: {
+    marginTop: spacing.sm,
+    marginLeft: 40 + spacing.md, // align with text, past the icon
+  },
+  noteInput: {
+    ...typography.sm,
+    color: colors.textPrimary,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+    paddingVertical: 4,
+    paddingHorizontal: 0,
   },
 });

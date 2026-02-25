@@ -1,5 +1,5 @@
 import firestore from '@react-native-firebase/firestore';
-import { HabitLog, DayHabits, HabitId } from '../types/habit';
+import { HabitLog, DayHabits, HabitId, HabitData, PersonalHabitLog } from '../types/habit';
 import { createEmptyDayHabits } from '../config/habits';
 import { getHabitLogId, getTodayDateString } from '../utils/dates';
 
@@ -71,6 +71,66 @@ export function subscribeToDayLog(
   return ref.onSnapshot((snapshot) => {
     if (snapshot.exists()) {
       onData(snapshot.data() as HabitLog);
+    } else {
+      onData(null);
+    }
+  });
+}
+
+// --- Personal habit logs (private collection) ---
+
+function getPersonalHabitLogRef(userId: string, date: string) {
+  return firestore().collection('personalHabitLogs').doc(`${userId}_${date}`);
+}
+
+export async function getOrCreatePersonalLog(userId: string): Promise<PersonalHabitLog> {
+  const date = getTodayDateString();
+  const ref = getPersonalHabitLogRef(userId, date);
+  const doc = await ref.get();
+
+  if (doc.exists()) {
+    return doc.data() as PersonalHabitLog;
+  }
+
+  const newLog: PersonalHabitLog = {
+    userId,
+    date,
+    updatedAt: firestore.Timestamp.now(),
+    habits: {},
+  };
+
+  await ref.set(newLog);
+  return newLog;
+}
+
+export async function updatePersonalHabit(
+  userId: string,
+  date: string,
+  habitId: string,
+  data: Partial<HabitData>
+) {
+  const ref = getPersonalHabitLogRef(userId, date);
+  const updateObj: Record<string, any> = {
+    updatedAt: firestore.FieldValue.serverTimestamp(),
+  };
+
+  for (const [key, value] of Object.entries(data)) {
+    updateObj[`habits.${habitId}.${key}`] = value;
+  }
+
+  // Use set with merge in case the document doesn't exist yet
+  return ref.set(updateObj, { merge: true });
+}
+
+export function subscribeToPersonalLog(
+  userId: string,
+  date: string,
+  onData: (log: PersonalHabitLog | null) => void
+) {
+  const ref = getPersonalHabitLogRef(userId, date);
+  return ref.onSnapshot((snapshot) => {
+    if (snapshot.exists()) {
+      onData(snapshot.data() as PersonalHabitLog);
     } else {
       onData(null);
     }

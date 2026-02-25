@@ -1,10 +1,9 @@
 import React from 'react';
-import { HabitId, DayHabits } from '../../types/habit';
+import { HabitId, DayHabits, WaterHabitData, ReadingHabitData, WorkoutHabitData } from '../../types/habit';
 import { getHabitDefinition } from '../../config/habits';
 import { BinaryHabitCard } from './BinaryHabitCard';
 import { ProgressiveHabitCard } from './ProgressiveHabitCard';
-import { JournalHabitCard } from './JournalHabitCard';
-import { WaterHabitData, ReadingHabitData, JournalHabitData } from '../../types/habit';
+import { WorkoutHabitCard } from './WorkoutHabitCard';
 
 interface HabitCardProps {
   habitId: HabitId;
@@ -12,7 +11,7 @@ interface HabitCardProps {
   onToggleBinary: (id: HabitId) => void;
   onUpdateWater: (oz: number) => void;
   onUpdateReading: (pages: number) => void;
-  onSaveJournal: (text: string) => void;
+  onSaveWorkoutNote: (note: string) => void;
 }
 
 export function HabitCard({
@@ -21,7 +20,7 @@ export function HabitCard({
   onToggleBinary,
   onUpdateWater,
   onUpdateReading,
-  onSaveJournal,
+  onSaveWorkoutNote,
 }: HabitCardProps) {
   const definition = getHabitDefinition(habitId);
   const data = habits[habitId];
@@ -52,12 +51,13 @@ export function HabitCard({
           onUpdate={onUpdateReading}
         />
       );
-    case 'journal':
+    case 'binary-with-note':
       return (
-        <JournalHabitCard
+        <WorkoutHabitCard
           definition={definition}
-          data={data as JournalHabitData}
-          onSave={onSaveJournal}
+          data={data as WorkoutHabitData}
+          onToggle={() => onToggleBinary(habitId)}
+          onSaveNote={onSaveWorkoutNote}
         />
       );
     default:

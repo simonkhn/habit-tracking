@@ -14,6 +14,7 @@ export const colors = {
   journal: '#9B59B6',
   reading: '#27AE60',
   workout: '#E74C3C',
+  meditate: '#00BCD4',
 
   // Semantic
   success: '#27AE60',

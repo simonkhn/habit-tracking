@@ -4,8 +4,11 @@ import { ScreenContainer } from '../../src/components/ui/ScreenContainer';
 import { ProgressBar } from '../../src/components/ui/ProgressBar';
 import { CelebrationOverlay } from '../../src/components/ui/CelebrationOverlay';
 import { HabitCard } from '../../src/components/habits/HabitCard';
+import { PersonalHabitCard } from '../../src/components/habits/PersonalHabitCard';
+import { TimedHabitCard } from '../../src/components/habits/TimedHabitCard';
 import { PartnerSummaryCard } from '../../src/components/partner/PartnerSummaryCard';
 import { useHabits } from '../../src/hooks/useHabits';
+import { usePersonalHabits } from '../../src/hooks/usePersonalHabits';
 import { usePartnerHabits } from '../../src/hooks/usePartnerHabits';
 import { useAuthStore } from '../../src/stores/authStore';
 import { HABIT_ORDER, CHALLENGE_TOTAL_DAYS } from '../../src/config/habits';
@@ -21,9 +24,14 @@ export default function TodayScreen() {
     toggleBinaryHabit,
     updateWater,
     updateReading,
-    saveJournal,
+    saveWorkoutNote,
   } = useHabits();
   const { partnerLog, completedCount: partnerCompletedCount } = usePartnerHabits();
+  const {
+    personalHabits,
+    habits: personalHabitData,
+    togglePersonalHabit,
+  } = usePersonalHabits();
 
   const [showCelebration, setShowCelebration] = useState(false);
   const [prevCompletedCount, setPrevCompletedCount] = useState(0);
@@ -89,11 +97,37 @@ export default function TodayScreen() {
               onToggleBinary={toggleBinaryHabit}
               onUpdateWater={updateWater}
               onUpdateReading={updateReading}
-              onSaveJournal={saveJournal}
+              onSaveWorkoutNote={saveWorkoutNote}
             />
           </View>
         ))}
       </View>
+
+      {/* Personal habits */}
+      {personalHabits.length > 0 && (
+        <View style={styles.personalSection}>
+          <Text style={styles.sectionLabel}>Personal</Text>
+          <View style={styles.habitList}>
+            {personalHabits.map((habit) => (
+              <View key={habit.id} style={styles.habitCardWrapper}>
+                {habit.type === 'timed' ? (
+                  <TimedHabitCard
+                    definition={habit}
+                    data={personalHabitData[habit.id]}
+                    onToggle={() => togglePersonalHabit(habit.id)}
+                  />
+                ) : (
+                  <PersonalHabitCard
+                    definition={habit}
+                    data={personalHabitData[habit.id]}
+                    onToggle={() => togglePersonalHabit(habit.id)}
+                  />
+                )}
+              </View>
+            ))}
+          </View>
+        </View>
+      )}
 
       {/* Partner summary */}
       {partnerProfile && (
@@ -167,4 +201,15 @@ const styles = StyleSheet.create({
     gap: spacing.md,
   },
   habitCardWrapper: {},
+  personalSection: {
+    marginTop: spacing.xl,
+  },
+  sectionLabel: {
+    ...typography.sm,
+    fontWeight: fontWeights.semibold,
+    color: colors.textTertiary,
+    textTransform: 'uppercase',
+    letterSpacing: 1,
+    marginBottom: spacing.md,
+  },
 });

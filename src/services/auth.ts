@@ -35,6 +35,9 @@ export async function signUp(
     challengeStartDate: '2026-02-24',
     expoPushToken: null,
     notificationPreferences: DEFAULT_NOTIFICATION_PREFS,
+    personalHabits: displayName === 'Bina'
+      ? [{ id: 'legsUp', label: 'Legs Up 5 Min', color: '#FF69B4', icon: 'body-outline', type: 'timed' as const, durationSeconds: 300 }]
+      : [],
   };
 
   await firestore().collection('users').doc(uid).set(profile);

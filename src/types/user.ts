@@ -1,3 +1,5 @@
+import { PersonalHabitDefinition } from './habit';
+
 export interface NotificationPreferences {
   partnerCompletions: boolean;
   streakNudge: boolean;
@@ -19,4 +21,5 @@ export interface UserProfile {
   challengeStartDate: string; // YYYY-MM-DD
   expoPushToken: string | null;
   notificationPreferences: NotificationPreferences;
+  personalHabits: PersonalHabitDefinition[];
 }

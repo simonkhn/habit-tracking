@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import { HabitId, DayHabits, WaterHabitData, ReadingHabitData } from '../../types/habit';
+import { HabitId, DayHabits, WaterHabitData, ReadingHabitData, WorkoutHabitData } from '../../types/habit';
 import { getHabitDefinition } from '../../config/habits';
 import { HabitIcon } from '../habits/HabitIcon';
 import { colors, typography, fontWeights, spacing, borderRadius } from '../../theme';
@@ -22,8 +22,11 @@ export function PartnerHabitRow({ habitId, habits, partnerWaterTarget }: Partner
   } else if (habitId === 'reading') {
     const readingData = data as ReadingHabitData;
     detail = `${readingData.pagesRead}/10 pages`;
-  } else if (habitId === 'journal') {
-    detail = data.completed ? 'Written' : 'Not yet';
+  } else if (habitId === 'workout' && data.completed) {
+    const workoutData = data as WorkoutHabitData;
+    if (workoutData.note) {
+      detail = workoutData.note;
+    }
   }
 
   return (
@@ -39,7 +42,11 @@ export function PartnerHabitRow({ habitId, habits, partnerWaterTarget }: Partner
       <Text style={[styles.label, data.completed && styles.labelCompleted]}>
         {definition.label}
       </Text>
-      {detail ? <Text style={styles.detail}>{detail}</Text> : null}
+      {detail ? (
+        <Text style={styles.detail} numberOfLines={1}>
+          {detail}
+        </Text>
+      ) : null}
       {data.completed && (
         <View
           style={[styles.checkmark, { backgroundColor: definition.color }]}
@@ -83,6 +90,7 @@ const styles = StyleSheet.create({
     ...typography.xs,
     color: colors.textSecondary,
     marginRight: spacing.sm,
+    maxWidth: 120,
   },
   checkmark: {
     width: 20,

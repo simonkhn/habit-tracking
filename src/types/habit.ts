@@ -6,9 +6,10 @@ export type HabitId =
   | 'water'
   | 'journal'
   | 'reading'
-  | 'workout';
+  | 'workout'
+  | 'meditate';
 
-export type HabitType = 'binary' | 'progressive' | 'journal';
+export type HabitType = 'binary' | 'progressive' | 'binary-with-note';
 
 export interface HabitDefinition {
   id: HabitId;
@@ -19,32 +20,31 @@ export interface HabitDefinition {
   description: string;
 }
 
-export interface BinaryHabitData {
+export interface HabitData {
   completed: boolean;
   completedAt: FirebaseFirestoreTypes.Timestamp | null;
 }
 
-export interface WaterHabitData extends BinaryHabitData {
+export interface WaterHabitData extends HabitData {
   currentOz: number;
 }
 
-export interface JournalHabitData extends BinaryHabitData {
-  text: string;
-}
-
-export interface ReadingHabitData extends BinaryHabitData {
+export interface ReadingHabitData extends HabitData {
   pagesRead: number;
 }
 
-export type HabitData = BinaryHabitData | WaterHabitData | JournalHabitData | ReadingHabitData;
+export interface WorkoutHabitData extends HabitData {
+  note: string;
+}
 
 export interface DayHabits {
-  morningSunlight: BinaryHabitData;
-  journal: JournalHabitData;
+  wakeUpOnTime: HabitData;
+  morningSunlight: HabitData;
   water: WaterHabitData;
-  wakeUpOnTime: BinaryHabitData;
+  journal: HabitData;
   reading: ReadingHabitData;
-  workout: BinaryHabitData;
+  workout: WorkoutHabitData;
+  meditate: HabitData;
 }
 
 export interface HabitLog {
@@ -52,4 +52,21 @@ export interface HabitLog {
   date: string; // YYYY-MM-DD
   updatedAt: FirebaseFirestoreTypes.Timestamp;
   habits: DayHabits;
+}
+
+// Personal habits (private, per-user)
+export interface PersonalHabitDefinition {
+  id: string;
+  label: string;
+  color: string;
+  icon: string;
+  type?: 'binary' | 'timed';
+  durationSeconds?: number;
+}
+
+export interface PersonalHabitLog {
+  userId: string;
+  date: string;
+  updatedAt: FirebaseFirestoreTypes.Timestamp;
+  habits: Record<string, HabitData>;
 }

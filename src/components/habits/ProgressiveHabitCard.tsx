@@ -1,4 +1,4 @@
-import React, { useCallback } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import { HabitDefinition, WaterHabitData, ReadingHabitData } from '../../types/habit';
@@ -27,25 +27,36 @@ export function ProgressiveHabitCard({
     ? (data as WaterHabitData).currentOz
     : (data as ReadingHabitData).pagesRead;
 
+  // Optimistic local state for instant tap feedback
+  const [localValue, setLocalValue] = useState(currentValue);
+
+  // Sync local state when external data arrives (e.g. Firestore snapshot)
+  useEffect(() => {
+    setLocalValue(currentValue);
+  }, [currentValue]);
+
   const target = isWater ? (profile?.waterTargetOz ?? 80) : READING_TARGET_PAGES;
   const increment = isWater ? WATER_INCREMENT_OZ : 1;
   const unit = isWater ? 'oz' : 'pages';
-  const progress = target > 0 ? currentValue / target : 0;
+  const progress = target > 0 ? localValue / target : 0;
 
   const handleIncrement = useCallback(() => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    const newValue = currentValue + increment;
+    const newValue = localValue + increment;
+    setLocalValue(newValue); // Instant visual update
     if (!data.completed && newValue >= target) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     }
     onUpdate(newValue);
-  }, [currentValue, increment, target, data.completed, onUpdate]);
+  }, [localValue, increment, target, data.completed, onUpdate]);
 
   const handleDecrement = useCallback(() => {
-    if (currentValue <= 0) return;
+    if (localValue <= 0) return;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    onUpdate(currentValue - increment);
-  }, [currentValue, increment, onUpdate]);
+    const newValue = localValue - increment;
+    setLocalValue(newValue); // Instant visual update
+    onUpdate(newValue);
+  }, [localValue, increment, onUpdate]);
 
   return (
     <View style={[styles.card, data.completed && styles.cardCompleted]}>
@@ -70,7 +81,7 @@ export function ProgressiveHabitCard({
               {definition.label}
             </Text>
             <Text style={styles.valueText}>
-              {currentValue} / {target} {unit}
+              {localValue} / {target} {unit}
             </Text>
           </View>
         </View>
@@ -99,13 +110,13 @@ export function ProgressiveHabitCard({
         <TouchableOpacity
           style={[styles.controlButton, styles.decrementButton]}
           onPress={handleDecrement}
-          disabled={currentValue <= 0}
+          disabled={localValue <= 0}
           activeOpacity={0.7}
         >
           <HabitIcon
             name="remove"
             size={20}
-            color={currentValue <= 0 ? colors.textTertiary : colors.textSecondary}
+            color={localValue <= 0 ? colors.textTertiary : colors.textSecondary}
           />
         </TouchableOpacity>
         <TouchableOpacity
