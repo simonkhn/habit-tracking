@@ -9,7 +9,7 @@ import { BadgeShelf } from '../../src/components/stats/BadgeShelf';
 import { DayDetailSheet } from '../../src/components/stats/DayDetailSheet';
 import { useSharedStats } from '../../src/hooks/useSharedStats';
 import { useAuthStore } from '../../src/stores/authStore';
-import { getDayNumber } from '../../src/utils/dates';
+import { getDayNumber, getHabitDate, getHabitDateString } from '../../src/utils/dates';
 import { HABIT_ORDER, CHUNK_SIZE_DAYS } from '../../src/config/habits';
 import { colors, typography, fontWeights, spacing } from '../../src/theme';
 
@@ -20,6 +20,8 @@ export default function StatsScreen() {
 
   const myName = profile?.displayName ?? 'Me';
   const partnerName = partnerProfile?.displayName ?? 'Partner';
+  const wakeUpTime = profile?.wakeUpTime ?? '06:00';
+  const todayString = getHabitDateString(wakeUpTime);
 
   const handleDayPress = useCallback((date: string) => {
     setSelectedDate(date);
@@ -33,9 +35,9 @@ export default function StatsScreen() {
     if (!selectedDate || !profile) return null;
     const myLog = myLogs.find((l) => l.date === selectedDate);
     const partnerLog = partnerLogs.find((l) => l.date === selectedDate);
-    const dayNum = getDayNumber(profile.challengeStartDate);
+    const dayNum = getDayNumber(profile.challengeStartDate, wakeUpTime);
     const selectedDayNum = dayNum - Math.round(
-      (new Date().getTime() - new Date(selectedDate).getTime()) / 86400000
+      (getHabitDate(wakeUpTime).getTime() - new Date(selectedDate + 'T00:00:00').getTime()) / 86400000
     );
     const chunkDayNum = ((selectedDayNum - 1) % CHUNK_SIZE_DAYS) + 1;
     return {
@@ -43,7 +45,7 @@ export default function StatsScreen() {
       partnerLog,
       dayLabel: `Day ${selectedDayNum} (Day ${chunkDayNum} of chunk)`,
     };
-  }, [selectedDate, myLogs, partnerLogs, profile]);
+  }, [selectedDate, myLogs, partnerLogs, profile, wakeUpTime]);
 
   if (isLoading) {
     return (
@@ -96,6 +98,7 @@ export default function StatsScreen() {
           dayNumber={stats.dayNumber}
           chunkNumber={stats.chunkNumber}
           onDayPress={handleDayPress}
+          today={todayString}
         />
       </View>
 

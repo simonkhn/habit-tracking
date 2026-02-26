@@ -8,7 +8,7 @@ import {
   getOrCreateTodayLog,
   updateHabitData,
 } from '../services/firestore';
-import { getTodayDateString } from '../utils/dates';
+import { getHabitDateString } from '../utils/dates';
 import { useAuthStore } from '../stores/authStore';
 
 export function useHabits() {
@@ -17,7 +17,7 @@ export function useHabits() {
   const [isLoading, setIsLoading] = useState(true);
   const debounceTimers = useRef<Record<string, NodeJS.Timeout>>({});
 
-  const date = getTodayDateString();
+  const date = getHabitDateString(profile?.wakeUpTime ?? '06:00');
   const userId = user?.uid;
 
   useEffect(() => {
@@ -27,7 +27,7 @@ export function useHabits() {
     }
 
     // Ensure today's log exists
-    getOrCreateTodayLog(userId);
+    getOrCreateTodayLog(userId, date);
 
     // Subscribe to real-time updates
     const ref = getHabitLogRef(userId, date);

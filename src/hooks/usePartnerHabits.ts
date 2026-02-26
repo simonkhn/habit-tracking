@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { HabitLog } from '../types/habit';
 import { subscribeToDayLog } from '../services/firestore';
-import { getTodayDateString } from '../utils/dates';
+import { getHabitDateString } from '../utils/dates';
 import { useAuthStore } from '../stores/authStore';
 
 export function usePartnerHabits() {
@@ -10,7 +10,7 @@ export function usePartnerHabits() {
   const [isLoading, setIsLoading] = useState(true);
 
   const partnerId = profile?.partnerId;
-  const date = getTodayDateString();
+  const date = getHabitDateString(profile?.wakeUpTime ?? '06:00');
 
   useEffect(() => {
     if (!partnerId) {

@@ -2,7 +2,7 @@ import { useEffect, useState, useMemo, useCallback, useRef } from 'react';
 import { HabitLog, HabitId, FeedEvent, FeedInteraction, WaterHabitData, ReadingHabitData, WorkoutHabitData } from '../types/habit';
 import { HABIT_DEFINITIONS, HABIT_ORDER } from '../config/habits';
 import { subscribeToDayLog, subscribeToFeedInteractions, getFeedEventId, addReaction, removeReaction, addComment, getReactionKey } from '../services/firestore';
-import { getTodayDateString } from '../utils/dates';
+import { getHabitDate } from '../utils/dates';
 import { useAuthStore } from '../stores/authStore';
 import { format, subDays, parseISO } from 'date-fns';
 
@@ -116,14 +116,15 @@ export function useFeed() {
   const myName = profile?.displayName || 'Me';
   const partnerName = partnerProfile?.displayName || 'Partner';
   const challengeStartDate = profile?.challengeStartDate;
+  const wakeUpTime = profile?.wakeUpTime ?? '06:00';
 
   // Get date strings for the feed window
   const dates = useMemo(() => {
-    const today = new Date();
+    const today = getHabitDate(wakeUpTime);
     return Array.from({ length: FEED_DAYS }, (_, i) =>
       format(subDays(today, i), 'yyyy-MM-dd'),
     );
-  }, []);
+  }, [wakeUpTime]);
 
   // Subscribe to both users' habit logs for the feed window
   useEffect(() => {
@@ -201,8 +202,9 @@ export function useFeed() {
 
   // Merge interactions into events and group by day
   const feedDays: FeedDay[] = useMemo(() => {
-    const today = getTodayDateString();
-    const yesterday = format(subDays(new Date(), 1), 'yyyy-MM-dd');
+    const habitDate = getHabitDate(wakeUpTime);
+    const today = format(habitDate, 'yyyy-MM-dd');
+    const yesterday = format(subDays(habitDate, 1), 'yyyy-MM-dd');
 
     // Merge interactions
     const eventsWithInteractions = allEvents.map((event) => ({
@@ -249,7 +251,7 @@ export function useFeed() {
     }
 
     return days;
-  }, [allEvents, interactions, dates, challengeStartDate]);
+  }, [allEvents, interactions, dates, challengeStartDate, wakeUpTime]);
 
   // Today's progress for the dual progress header
   const todayDate = dates[0];
