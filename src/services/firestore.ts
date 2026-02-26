@@ -1,5 +1,5 @@
 import firestore from '@react-native-firebase/firestore';
-import { HabitLog, DayHabits, HabitId, HabitData, PersonalHabitLog, FeedInteraction, FeedComment, ReactionEmoji } from '../types/habit';
+import { HabitLog, DayHabits, HabitId, HabitData, PersonalHabitLog, FeedInteraction, FeedComment } from '../types/habit';
 import { createEmptyDayHabits } from '../config/habits';
 import { getHabitLogId, getTodayDateString } from '../utils/dates';
 
@@ -160,37 +160,53 @@ export function subscribeToFeedInteractions(
   const unsubscribes: (() => void)[] = [];
 
   for (const eventId of eventIds) {
-    const unsub = getFeedInteractionRef(eventId).onSnapshot((snapshot) => {
-      if (snapshot.exists()) {
-        interactions[eventId] = snapshot.data() as FeedInteraction;
-      } else {
+    const unsub = getFeedInteractionRef(eventId).onSnapshot(
+      (snapshot) => {
+        if (snapshot && snapshot.exists()) {
+          interactions[eventId] = snapshot.data() as FeedInteraction;
+        } else {
+          delete interactions[eventId];
+        }
+        onData({ ...interactions });
+      },
+      (_error) => {
+        // Gracefully handle permission errors (e.g. rules not deployed yet)
         delete interactions[eventId];
-      }
-      onData({ ...interactions });
-    });
+        onData({ ...interactions });
+      },
+    );
     unsubscribes.push(unsub);
   }
 
   return () => unsubscribes.forEach((u) => u());
 }
 
-export async function addReaction(eventId: string, userId: string, emoji: ReactionEmoji) {
+export function getReactionKey(userId: string, emoji: string): string {
+  return `${userId}_${emoji}`;
+}
+
+export async function addReaction(eventId: string, userId: string, emoji: string) {
   const ref = getFeedInteractionRef(eventId);
+  const key = getReactionKey(userId, emoji);
   return ref.set(
     {
-      [`reactions.${userId}`]: {
-        emoji,
-        timestamp: firestore.FieldValue.serverTimestamp(),
+      reactions: {
+        [key]: {
+          userId,
+          emoji,
+          timestamp: firestore.FieldValue.serverTimestamp(),
+        },
       },
     },
     { merge: true }
   );
 }
 
-export async function removeReaction(eventId: string, userId: string) {
+export async function removeReaction(eventId: string, userId: string, emoji: string) {
   const ref = getFeedInteractionRef(eventId);
+  const key = getReactionKey(userId, emoji);
   return ref.update({
-    [`reactions.${userId}`]: firestore.FieldValue.delete(),
+    [`reactions.${key}`]: firestore.FieldValue.delete(),
   });
 }
 

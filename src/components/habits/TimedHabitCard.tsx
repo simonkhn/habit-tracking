@@ -3,7 +3,9 @@ import { View, Text, StyleSheet, Pressable, AppState } from 'react-native';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
+  withTiming,
   withSpring,
+  runOnJS,
 } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
 import * as Notifications from 'expo-notifications';
@@ -38,7 +40,10 @@ export function TimedHabitCard({ definition, data, onToggle }: TimedHabitCardPro
   const startedAtRef = useRef<number | null>(null);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
   const notifIdRef = useRef<string | null>(null);
+  const holdTimer = useRef<NodeJS.Timeout | null>(null);
+  const isHolding = useRef(false);
   const cardScale = useSharedValue(1);
+  const fillProgress = useSharedValue(0);
 
   // Tick the timer
   const tick = useCallback(() => {
@@ -123,6 +128,44 @@ export function TimedHabitCard({ definition, data, onToggle }: TimedHabitCardPro
     }
   }, [completed, running, duration, tick, definition.label]);
 
+  const HOLD_DURATION = 500;
+
+  const triggerSkipComplete = useCallback(() => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    onToggle();
+    fillProgress.value = withTiming(0, { duration: 200 });
+    cardScale.value = withSpring(1);
+  }, [onToggle]);
+
+  const handlePressIn = useCallback(() => {
+    if (completed || running) {
+      cardScale.value = withSpring(0.97);
+      return;
+    }
+    // Start hold-to-complete
+    isHolding.current = true;
+    cardScale.value = withTiming(0.97, { duration: 100 });
+    fillProgress.value = withTiming(1, { duration: HOLD_DURATION });
+
+    holdTimer.current = setTimeout(() => {
+      if (isHolding.current) {
+        runOnJS(triggerSkipComplete)();
+      }
+    }, HOLD_DURATION);
+  }, [completed, running, triggerSkipComplete]);
+
+  const handlePressOut = useCallback(() => {
+    isHolding.current = false;
+    if (holdTimer.current) {
+      clearTimeout(holdTimer.current);
+      holdTimer.current = null;
+    }
+    if (!completed) {
+      fillProgress.value = withTiming(0, { duration: 150 });
+    }
+    cardScale.value = withSpring(1);
+  }, [completed]);
+
   const handleTap = useCallback(() => {
     if (completed) {
       // Undo
@@ -133,16 +176,13 @@ export function TimedHabitCard({ definition, data, onToggle }: TimedHabitCardPro
     }
   }, [completed, running, handleStart, onToggle]);
 
-  const handlePressIn = useCallback(() => {
-    cardScale.value = withSpring(0.97);
-  }, []);
-
-  const handlePressOut = useCallback(() => {
-    cardScale.value = withSpring(1);
-  }, []);
-
   const cardAnimStyle = useAnimatedStyle(() => ({
     transform: [{ scale: cardScale.value }],
+  }));
+
+  const fillStyle = useAnimatedStyle(() => ({
+    width: `${fillProgress.value * 100}%`,
+    backgroundColor: `${definition.color}26`,
   }));
 
   const progress = running ? (duration - remaining) / duration : 0;
@@ -161,6 +201,7 @@ export function TimedHabitCard({ definition, data, onToggle }: TimedHabitCardPro
           cardAnimStyle,
         ]}
       >
+        <Animated.View style={[styles.fillOverlay, fillStyle]} />
         <View style={styles.row}>
           {/* Icon with optional progress ring */}
           <View style={styles.iconWrapper}>
@@ -223,7 +264,7 @@ export function TimedHabitCard({ definition, data, onToggle }: TimedHabitCardPro
               </Text>
             ) : (
               <Text style={styles.description}>
-                {completed ? 'Personal' : 'Tap to start timer'}
+                {completed ? 'Personal' : 'Tap for timer \u2022 Hold to complete'}
               </Text>
             )}
           </View>
@@ -264,6 +305,13 @@ const styles = StyleSheet.create({
   },
   cardCompleted: {
     opacity: 0.7,
+  },
+  fillOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    bottom: 0,
+    borderRadius: borderRadius.md,
   },
   row: {
     flexDirection: 'row',

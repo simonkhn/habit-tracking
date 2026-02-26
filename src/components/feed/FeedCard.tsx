@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { FeedEvent, ReactionEmoji } from '../../types/habit';
+import { FeedEvent } from '../../types/habit';
 import { ReactionBar } from './ReactionBar';
 import { CommentSection } from './CommentSection';
 import { AllCompleteCard } from './AllCompleteCard';
@@ -13,7 +13,7 @@ interface FeedCardProps {
   currentUserId: string;
   userName: string;
   partnerName: string;
-  onReact: (eventId: string, emoji: ReactionEmoji) => void;
+  onReact: (eventId: string, emoji: string) => void;
   onComment: (eventId: string, text: string) => void;
 }
 

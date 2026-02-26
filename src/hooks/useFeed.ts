@@ -1,7 +1,7 @@
 import { useEffect, useState, useMemo, useCallback, useRef } from 'react';
-import { HabitLog, HabitId, FeedEvent, FeedInteraction, WaterHabitData, ReadingHabitData, WorkoutHabitData, ReactionEmoji } from '../types/habit';
+import { HabitLog, HabitId, FeedEvent, FeedInteraction, WaterHabitData, ReadingHabitData, WorkoutHabitData } from '../types/habit';
 import { HABIT_DEFINITIONS, HABIT_ORDER } from '../config/habits';
-import { subscribeToDayLog, subscribeToFeedInteractions, getFeedEventId, addReaction, removeReaction, addComment } from '../services/firestore';
+import { subscribeToDayLog, subscribeToFeedInteractions, getFeedEventId, addReaction, removeReaction, addComment, getReactionKey } from '../services/firestore';
 import { getTodayDateString } from '../utils/dates';
 import { useAuthStore } from '../stores/authStore';
 import { format, subDays, parseISO } from 'date-fns';
@@ -265,11 +265,12 @@ export function useFeed() {
 
   // Actions
   const toggleReaction = useCallback(
-    async (eventId: string, emoji: ReactionEmoji) => {
+    async (eventId: string, emoji: string) => {
       if (!userId) return;
-      const existing = interactions[eventId]?.reactions?.[userId];
-      if (existing?.emoji === emoji) {
-        await removeReaction(eventId, userId);
+      const key = getReactionKey(userId, emoji);
+      const existing = interactions[eventId]?.reactions?.[key];
+      if (existing) {
+        await removeReaction(eventId, userId, emoji);
       } else {
         await addReaction(eventId, userId, emoji);
       }

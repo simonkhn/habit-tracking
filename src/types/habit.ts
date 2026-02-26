@@ -55,18 +55,10 @@ export interface HabitLog {
 }
 
 // Feed types
-export type ReactionEmoji = 'fire' | 'heart' | 'clap' | 'flex' | 'party';
-
-export const REACTION_EMOJIS: { key: ReactionEmoji; emoji: string }[] = [
-  { key: 'fire', emoji: '\uD83D\uDD25' },
-  { key: 'heart', emoji: '\u2764\uFE0F' },
-  { key: 'clap', emoji: '\uD83D\uDC4F' },
-  { key: 'flex', emoji: '\uD83D\uDCAA' },
-  { key: 'party', emoji: '\uD83C\uDF89' },
-];
 
 export interface FeedReaction {
-  emoji: ReactionEmoji;
+  userId: string;
+  emoji: string; // any emoji from keyboard
   timestamp: FirebaseFirestoreTypes.Timestamp;
 }
 
@@ -77,7 +69,7 @@ export interface FeedComment {
 }
 
 export interface FeedInteraction {
-  reactions: Record<string, FeedReaction>; // keyed by userId
+  reactions: Record<string, FeedReaction>; // keyed by `${userId}_${emoji}`
   comments: FeedComment[];
 }
 
