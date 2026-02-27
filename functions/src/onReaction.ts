@@ -76,7 +76,7 @@ export const onReaction = functions.firestore
 
       if (!ownerData?.expoPushToken) {
         console.log('[onReaction] Event owner has no push token — skipping');
-        return;
+        continue;
       }
 
       const message: ExpoPushMessage = {

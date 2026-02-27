@@ -42,6 +42,7 @@ export function TimedHabitCard({ definition, data, onToggle }: TimedHabitCardPro
   const notifIdRef = useRef<string | null>(null);
   const holdTimer = useRef<NodeJS.Timeout | null>(null);
   const isHolding = useRef(false);
+  const justCompleted = useRef(false);
   const cardScale = useSharedValue(1);
   const fillProgress = useSharedValue(0);
 
@@ -131,6 +132,7 @@ export function TimedHabitCard({ definition, data, onToggle }: TimedHabitCardPro
   const HOLD_DURATION = 500;
 
   const triggerSkipComplete = useCallback(() => {
+    justCompleted.current = true;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     onToggle();
     fillProgress.value = withTiming(0, { duration: 200 });
@@ -167,6 +169,10 @@ export function TimedHabitCard({ definition, data, onToggle }: TimedHabitCardPro
   }, [completed]);
 
   const handleTap = useCallback(() => {
+    if (justCompleted.current) {
+      justCompleted.current = false;
+      return;
+    }
     if (completed) {
       // Undo
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);

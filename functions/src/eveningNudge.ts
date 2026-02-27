@@ -54,34 +54,47 @@ export const eveningNudge = functions.pubsub
         .doc(logId)
         .get();
 
+      // Build list of incomplete core habits
+      const incomplete: string[] = [];
+
       if (!logDoc.exists) {
-        messages.push({
-          to: userData.expoPushToken,
-          sound: 'default',
-          title: 'Evening check-in',
-          body: "You haven't logged any habits today. There's still time!",
-        });
-        continue;
+        // No log at all — all 7 core habits are incomplete
+        incomplete.push(...Object.values(HABIT_LABELS));
+      } else {
+        const logData = logDoc.data();
+        if (logData?.habits) {
+          for (const habitId of ALL_HABIT_IDS) {
+            const habit = logData.habits[habitId];
+            if (habit?.completed) continue;
+
+            if (habitId === 'water') {
+              const currentOz = habit?.currentOz || 0;
+              const target = userData.waterTargetOz || 80;
+              incomplete.push(`Water (${currentOz}/${target}oz)`);
+            } else if (habitId === 'reading') {
+              const pages = habit?.pagesRead || 0;
+              incomplete.push(pages > 0 ? `Reading (${pages}/10 pages)` : 'Reading');
+            } else {
+              incomplete.push(HABIT_LABELS[habitId] || habitId);
+            }
+          }
+        }
       }
 
-      const logData = logDoc.data();
-      if (!logData?.habits) continue;
+      // Check personal habits
+      const personalHabits = userData.personalHabits || [];
+      if (personalHabits.length > 0) {
+        const personalLogDoc = await admin
+          .firestore()
+          .collection('personalHabitLogs')
+          .doc(logId)
+          .get();
+        const personalLogData = personalLogDoc.data();
 
-      // Build list of incomplete habits with details
-      const incomplete: string[] = [];
-      for (const habitId of ALL_HABIT_IDS) {
-        const habit = logData.habits[habitId];
-        if (habit?.completed) continue;
-
-        if (habitId === 'water') {
-          const currentOz = habit?.currentOz || 0;
-          const target = userData.waterTargetOz || 80;
-          incomplete.push(`Water (${currentOz}/${target}oz)`);
-        } else if (habitId === 'reading') {
-          const pages = habit?.pagesRead || 0;
-          incomplete.push(pages > 0 ? `Reading (${pages}/10 pages)` : 'Reading');
-        } else {
-          incomplete.push(HABIT_LABELS[habitId] || habitId);
+        for (const habitDef of personalHabits) {
+          if (!personalLogData?.habits?.[habitDef.id]?.completed) {
+            incomplete.push(habitDef.label);
+          }
         }
       }
 
