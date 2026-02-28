@@ -1,6 +1,7 @@
 export { onHabitComplete } from './onHabitComplete';
 export { onReaction } from './onReaction';
 export { onChatMessage } from './onChatMessage';
+export { onChatReaction } from './onChatReaction';
 export { eveningNudge } from './eveningNudge';
 export { noonWaterCheck, afternoonWaterCheck } from './waterCheck';
 export {

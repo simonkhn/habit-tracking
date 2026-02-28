@@ -11,9 +11,9 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { Ionicons } from '@expo/vector-icons';
 import { useChat } from '../../src/hooks/useChat';
-import { useAuthStore } from '../../src/stores/authStore';
 import { ChatBubble } from '../../src/components/chat/ChatBubble';
 import { ChatTag } from '../../src/types/chat';
 import { colors, typography, fontWeights, spacing, borderRadius } from '../../src/theme';
@@ -25,12 +25,23 @@ const FILTERS: { label: string; value: ChatTag | null }[] = [
 ];
 
 export default function ChatScreen() {
-  const { messages, filter, setFilter, sendMessage, isLoading, currentUserId } = useChat();
-  const { profile, partnerProfile } = useAuthStore();
+  const {
+    messages,
+    reactions,
+    filter,
+    setFilter,
+    sendMessage,
+    deleteMessage,
+    toggleReaction,
+    replyTo,
+    setReplyTo,
+    clearReplyTo,
+    isLoading,
+    currentUserId,
+    myName,
+    partnerName,
+  } = useChat();
   const [text, setText] = useState('');
-
-  const myName = profile?.displayName || 'Me';
-  const partnerName = partnerProfile?.displayName || 'Partner';
 
   const handleSend = () => {
     if (!text.trim()) return;
@@ -74,29 +85,58 @@ export default function ChatScreen() {
           behavior={Platform.OS === 'ios' ? 'padding' : undefined}
           keyboardVerticalOffset={90}
         >
-          <FlatList
-            data={messages}
-            keyExtractor={(item) => item.id}
-            renderItem={({ item }) => (
-              <ChatBubble
-                message={item}
-                isMe={item.userId === currentUserId}
-                senderName={getSenderName(item.userId)}
-              />
-            )}
-            inverted
-            contentContainerStyle={styles.listContent}
-            showsVerticalScrollIndicator={false}
-            ListEmptyComponent={
-              <View style={styles.empty}>
-                <Text style={styles.emptyText}>
-                  {filter
-                    ? `No ${filter === 'idea' ? 'ideas' : 'bugs'} yet. Start a message with #${filter} to tag it.`
-                    : 'No messages yet. Say something!'}
+          <GestureHandlerRootView style={styles.flex}>
+            <FlatList
+              data={messages}
+              keyExtractor={(item) => item.id}
+              renderItem={({ item }) => (
+                <ChatBubble
+                  message={item}
+                  isMe={item.userId === currentUserId}
+                  senderName={getSenderName(item.userId)}
+                  reactions={reactions[item.id] || null}
+                  currentUserId={currentUserId}
+                  onReply={setReplyTo}
+                  onDelete={deleteMessage}
+                  onReact={toggleReaction}
+                />
+              )}
+              inverted
+              contentContainerStyle={styles.listContent}
+              showsVerticalScrollIndicator={false}
+              ListEmptyComponent={
+                <View style={styles.empty}>
+                  <Text style={styles.emptyText}>
+                    {filter
+                      ? `No ${filter === 'idea' ? 'ideas' : 'bugs'} yet. Start a message with #${filter} to tag it.`
+                      : 'No messages yet. Say something!'}
+                  </Text>
+                </View>
+              }
+            />
+          </GestureHandlerRootView>
+
+          {/* Reply preview bar */}
+          {replyTo && (
+            <View style={styles.replyBar}>
+              <View style={styles.replyAccent} />
+              <View style={styles.replyContent}>
+                <Text style={styles.replyLabel}>
+                  Replying to {getSenderName(replyTo.userId)}
+                </Text>
+                <Text style={styles.replyText} numberOfLines={1}>
+                  {replyTo.text}
                 </Text>
               </View>
-            }
-          />
+              <TouchableOpacity
+                onPress={clearReplyTo}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                activeOpacity={0.6}
+              >
+                <Ionicons name="close" size={20} color={colors.textTertiary} />
+              </TouchableOpacity>
+            </View>
+          )}
 
           {/* Input bar */}
           <View style={styles.inputBar}>
@@ -183,13 +223,41 @@ const styles = StyleSheet.create({
     paddingTop: 60,
     alignItems: 'center',
     paddingHorizontal: 32,
-    // inverted FlatList flips this, so it appears centered
-    transform: [{ scaleY: -1 }],
   },
   emptyText: {
     ...typography.base,
     color: colors.textTertiary,
     textAlign: 'center',
+  },
+  replyBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: spacing.sm,
+    backgroundColor: colors.surface,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+  },
+  replyAccent: {
+    width: 4,
+    alignSelf: 'stretch',
+    backgroundColor: colors.textPrimary,
+    borderRadius: 2,
+    marginRight: spacing.sm,
+  },
+  replyContent: {
+    flex: 1,
+    marginRight: spacing.sm,
+  },
+  replyLabel: {
+    ...typography.xs,
+    fontWeight: fontWeights.semibold,
+    color: colors.textPrimary,
+  },
+  replyText: {
+    ...typography.xs,
+    color: colors.textTertiary,
+    marginTop: 1,
   },
   inputBar: {
     flexDirection: 'row',
