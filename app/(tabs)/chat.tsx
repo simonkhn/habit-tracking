@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useMemo } from 'react';
+import React, { useState, useRef, useMemo } from 'react';
 import {
   View,
   Text,
@@ -6,12 +6,9 @@ import {
   TextInput,
   TouchableOpacity,
   StyleSheet,
-  Platform,
-  Keyboard,
   ActivityIndicator,
 } from 'react-native';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { Ionicons } from '@expo/vector-icons';
 import { useChat } from '../../src/hooks/useChat';
@@ -134,31 +131,7 @@ function buildListItems(messages: ChatMessage[]): ChatListItem[] {
 }
 
 export default function ChatScreen() {
-  const tabBarHeight = useBottomTabBarHeight();
-  const insets = useSafeAreaInsets();
   const flatListRef = useRef<FlatList>(null);
-  const [keyboardHeight, setKeyboardHeight] = useState(0);
-
-  useEffect(() => {
-    const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
-    const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
-
-    const showSub = Keyboard.addListener(showEvent, (e) => {
-      setKeyboardHeight(e.endCoordinates.height);
-    });
-    const hideSub = Keyboard.addListener(hideEvent, () => {
-      setKeyboardHeight(0);
-    });
-
-    return () => {
-      showSub.remove();
-      hideSub.remove();
-    };
-  }, []);
-
-  const keyboardPadding = keyboardHeight > 0
-    ? Math.max(0, keyboardHeight - tabBarHeight)
-    : 0;
 
   const {
     messages,
@@ -251,7 +224,7 @@ export default function ChatScreen() {
           <ActivityIndicator size="large" color={colors.textPrimary} />
         </View>
       ) : (
-        <View style={[styles.flex, { paddingBottom: keyboardPadding }]}>
+        <View style={styles.flex}>
           <GestureHandlerRootView style={styles.flex}>
             <FlatList
               ref={flatListRef}
