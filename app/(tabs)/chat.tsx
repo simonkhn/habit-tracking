@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -6,11 +6,11 @@ import {
   TextInput,
   TouchableOpacity,
   StyleSheet,
-  KeyboardAvoidingView,
   Platform,
+  Keyboard,
   ActivityIndicator,
 } from 'react-native';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { Ionicons } from '@expo/vector-icons';
@@ -27,7 +27,25 @@ const FILTERS: { label: string; value: ChatTag | null }[] = [
 
 export default function ChatScreen() {
   const tabBarHeight = useBottomTabBarHeight();
-  const insets = useSafeAreaInsets();
+  const [keyboardPadding, setKeyboardPadding] = useState(0);
+
+  useEffect(() => {
+    const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
+    const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
+
+    const showSub = Keyboard.addListener(showEvent, (e) => {
+      setKeyboardPadding(e.endCoordinates.height - tabBarHeight);
+    });
+    const hideSub = Keyboard.addListener(hideEvent, () => {
+      setKeyboardPadding(0);
+    });
+
+    return () => {
+      showSub.remove();
+      hideSub.remove();
+    };
+  }, [tabBarHeight]);
+
   const {
     messages,
     reactions,
@@ -83,11 +101,7 @@ export default function ChatScreen() {
           <ActivityIndicator size="large" color={colors.textPrimary} />
         </View>
       ) : (
-        <KeyboardAvoidingView
-          style={styles.flex}
-          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-          keyboardVerticalOffset={tabBarHeight + insets.top}
-        >
+        <View style={[styles.flex, { paddingBottom: keyboardPadding }]}>
           <GestureHandlerRootView style={styles.flex}>
             <FlatList
               data={messages}
@@ -167,7 +181,7 @@ export default function ChatScreen() {
               />
             </TouchableOpacity>
           </View>
-        </KeyboardAvoidingView>
+        </View>
       )}
     </SafeAreaView>
   );
