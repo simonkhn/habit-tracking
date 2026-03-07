@@ -50,7 +50,7 @@ export function HabitComparisonRow({ comparison, isLast }: HabitComparisonRowPro
           <HabitIcon name={def.icon} size={14} color={def.color} />
         </View>
         <Text style={[styles.habitName, { color: def.color }]} numberOfLines={1}>
-          {def.label}
+          {def.shortLabel || def.label}
         </Text>
       </View>
 
@@ -64,32 +64,6 @@ export function HabitComparisonRow({ comparison, isLast }: HabitComparisonRowPro
       <View style={styles.streakCell}>
         <Text style={styles.streakNumber}>{comparison.partnerStreak.current}</Text>
         <Text style={styles.bestLabel}>best {comparison.partnerStreak.longest}</Text>
-      </View>
-
-      {/* Right: 7-day dot grid (2 rows) */}
-      <View style={styles.dotsGrid}>
-        <View style={styles.dotsRow}>
-          {comparison.myLast7Days.map((completed, i) => (
-            <View
-              key={`my-${i}`}
-              style={[
-                styles.dot,
-                { backgroundColor: completed ? def.color : colors.border },
-              ]}
-            />
-          ))}
-        </View>
-        <View style={styles.dotsRow}>
-          {comparison.partnerLast7Days.map((completed, i) => (
-            <View
-              key={`p-${i}`}
-              style={[
-                styles.dot,
-                { backgroundColor: completed ? def.color : colors.border },
-              ]}
-            />
-          ))}
-        </View>
       </View>
 
       {/* Far right: Trend */}
@@ -113,9 +87,6 @@ export function HabitBreakdownTable({ comparisons, myName, partnerName }: HabitB
         </View>
         <View style={styles.streakCell}>
           <Text style={styles.headerText} numberOfLines={1}>{partnerName}</Text>
-        </View>
-        <View style={styles.dotsGrid}>
-          <Text style={styles.headerText}>7 days</Text>
         </View>
         <View style={styles.trendCell}>
           <Text style={styles.headerText}>{' '}</Text>
@@ -174,7 +145,7 @@ const styles = StyleSheet.create({
 
   // --- Habit info (left) ---
   habitInfo: {
-    flex: 2.5,
+    flex: 3,
     flexDirection: 'row',
     alignItems: 'center',
     minWidth: 0,
@@ -208,23 +179,6 @@ const styles = StyleSheet.create({
     ...typography.xs,
     color: colors.textTertiary,
     lineHeight: 14,
-  },
-
-  // --- Dots grid ---
-  dotsGrid: {
-    flex: 1.8,
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 2,
-  },
-  dotsRow: {
-    flexDirection: 'row',
-    gap: 2,
-  },
-  dot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
   },
 
   // --- Trend ---

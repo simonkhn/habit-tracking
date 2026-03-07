@@ -91,8 +91,8 @@ export default function StatsScreen() {
       <DualRingHero
         myName={myName}
         partnerName={partnerName}
-        myCompletedHabits={stats.myTodayCompletedHabits}
-        partnerCompletedHabits={stats.partnerTodayCompletedHabits}
+        myHabitInfos={stats.myTodayHabitInfos}
+        partnerHabitInfos={stats.partnerTodayHabitInfos}
         totalHabits={HABIT_ORDER.length}
         dayNumber={stats.dayNumber}
         chunkNumber={stats.chunkNumber}

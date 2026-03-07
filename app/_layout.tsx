@@ -2,6 +2,7 @@ import React, { useEffect } from 'react';
 import { ActivityIndicator, View, StyleSheet } from 'react-native';
 import { Slot, useRouter, useSegments } from 'expo-router';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { KeyboardProvider } from 'react-native-keyboard-controller';
 import { useAuth } from '../src/hooks/useAuth';
 import { useNotifications } from '../src/hooks/useNotifications';
 import { useAuthStore } from '../src/stores/authStore';
@@ -40,9 +41,11 @@ export default function RootLayout() {
   useNotifications();
 
   return (
-    <GestureHandlerRootView style={styles.container}>
-      <AuthGate />
-    </GestureHandlerRootView>
+    <KeyboardProvider>
+      <GestureHandlerRootView style={styles.container}>
+        <AuthGate />
+      </GestureHandlerRootView>
+    </KeyboardProvider>
   );
 }
 

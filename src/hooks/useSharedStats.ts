@@ -48,6 +48,17 @@ function getTodayCompletedHabits(logs: HabitLog[], today: string): boolean[] {
   return HABIT_ORDER.map((habitId) => todayLog?.habits?.[habitId]?.completed ?? false);
 }
 
+function getTodayHabitInfos(logs: HabitLog[], today: string): { habitIndex: number; completedAt: number }[] {
+  const todayLog = logs.find((l) => l.date === today);
+  return HABIT_ORDER.map((habitId, index) => {
+    const data = todayLog?.habits?.[habitId];
+    const completedAt = data?.completed && data.completedAt?.toMillis
+      ? data.completedAt.toMillis()
+      : 0;
+    return { habitIndex: index, completedAt };
+  });
+}
+
 function mergeTodayLog(logs: HabitLog[], todayLog: HabitLog | null, today: string): HabitLog[] {
   if (!todayLog) return logs;
   const filtered = logs.filter((l) => l.date !== today);
@@ -138,12 +149,14 @@ export function useSharedStats() {
     const myHabitStreaks = buildHabitStreaks(myLogs);
     const myTodayCompletedCount = getTodayCompletedCount(myLogs, today);
     const myTodayCompletedHabits = getTodayCompletedHabits(myLogs, today);
+    const myTodayHabitInfos = getTodayHabitInfos(myLogs, today);
 
     // Partner stats
     const partnerDailyStats = buildDailyStats(partnerLogs);
     const partnerHabitStreaks = buildHabitStreaks(partnerLogs);
     const partnerTodayCompletedCount = getTodayCompletedCount(partnerLogs, today);
     const partnerTodayCompletedHabits = getTodayCompletedHabits(partnerLogs, today);
+    const partnerTodayHabitInfos = getTodayHabitInfos(partnerLogs, today);
 
     // Pair streak
     const { current: pairStreak, longest: longestPairStreak } =
@@ -215,10 +228,12 @@ export function useSharedStats() {
       myHabitStreaks,
       myTodayCompletedCount,
       myTodayCompletedHabits,
+      myTodayHabitInfos,
       partnerDailyStats,
       partnerHabitStreaks,
       partnerTodayCompletedCount,
       partnerTodayCompletedHabits,
+      partnerTodayHabitInfos,
       pairStreak,
       longestPairStreak,
       pairDayResults,

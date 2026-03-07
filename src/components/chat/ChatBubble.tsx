@@ -200,35 +200,9 @@ export function ChatBubble({
                   bubbleRadii,
                 ]}
               >
-                {/* Sender name + tag inline for partner; tag only for me */}
-                {((!isMe && isFirstInGroup) || message.tag) && (
-                  <View style={styles.nameTagRow}>
-                    {!isMe && isFirstInGroup && (
-                      <Text style={styles.senderName}>{senderName}</Text>
-                    )}
-                    {message.tag && (
-                      <View
-                        style={[
-                          styles.tagPill,
-                          message.tag === 'idea' ? styles.tagIdea : styles.tagBug,
-                        ]}
-                      >
-                        <Ionicons
-                          name={message.tag === 'idea' ? 'bulb-outline' : 'bug-outline'}
-                          size={12}
-                          color={message.tag === 'idea' ? '#2563EB' : '#DC2626'}
-                        />
-                        <Text
-                          style={[
-                            styles.tagText,
-                            message.tag === 'idea' ? styles.tagTextIdea : styles.tagTextBug,
-                          ]}
-                        >
-                          {message.tag === 'idea' ? 'Idea' : 'Bug'}
-                        </Text>
-                      </View>
-                    )}
-                  </View>
+                {/* Sender name for partner first-in-group */}
+                {!isMe && isFirstInGroup && (
+                  <Text style={styles.senderName}>{senderName}</Text>
                 )}
 
                 {/* Reply preview */}
@@ -259,9 +233,29 @@ export function ChatBubble({
                   </View>
                 )}
 
-                <Text style={[styles.messageText, isMe && styles.messageTextMe]}>
-                  {displayText}
-                </Text>
+                {/* Message text with inline tag */}
+                <View style={styles.messageRow}>
+                  {message.tag && (
+                    <View
+                      style={[
+                        styles.tagPill,
+                        message.tag === 'idea' ? styles.tagIdea : styles.tagBug,
+                      ]}
+                    >
+                      <Text
+                        style={[
+                          styles.tagText,
+                          message.tag === 'idea' ? styles.tagTextIdea : styles.tagTextBug,
+                        ]}
+                      >
+                        {message.tag === 'idea' ? 'Idea' : 'Bug'}
+                      </Text>
+                    </View>
+                  )}
+                  <Text style={[styles.messageText, isMe && styles.messageTextMe]}>
+                    {displayText}
+                  </Text>
+                </View>
 
                 {showTimestamp && (
                   <Text style={[styles.timestamp, isMe && styles.timestampMe]}>
@@ -408,17 +402,18 @@ const styles = StyleSheet.create({
     backgroundColor: '#F3F4F6',
   },
 
-  // Name + tag inline row
-  nameTagRow: {
+  // Inline message row (tag + text on same line)
+  messageRow: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     alignItems: 'center',
     gap: 4,
-    marginBottom: 2,
   },
   senderName: {
     ...typography.xs,
     fontWeight: fontWeights.semibold,
     color: colors.textSecondary,
+    marginBottom: 2,
   },
 
   // Reply preview inside bubble
@@ -454,14 +449,13 @@ const styles = StyleSheet.create({
     color: 'rgba(255,255,255,0.6)',
   },
 
-  // Tag pill
+  // Tag pill (compact inline badge)
   tagPill: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: 2,
-    borderRadius: borderRadius.sm,
+    paddingHorizontal: 5,
+    paddingVertical: 1,
+    borderRadius: 4,
   },
   tagIdea: {
     backgroundColor: '#DBEAFE',
@@ -470,7 +464,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#FEE2E2',
   },
   tagText: {
-    ...typography.xs,
+    fontSize: 9,
     fontWeight: fontWeights.semibold,
   },
   tagTextIdea: {
