@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, Pressable, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, Text, Pressable, StyleSheet, TouchableOpacity, Modal } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, {
@@ -17,6 +17,10 @@ const QUICK_EMOJIS = ['\u{1F525}', '\u2764\uFE0F', '\u{1F44F}', '\u{1F4AA}', '\u
 const SWIPE_MAX = 80;
 const SWIPE_THRESHOLD = 60;
 
+const BUBBLE_RADIUS = 16;
+const BUBBLE_RADIUS_GROUPED = 4;
+const BUBBLE_TAIL_RADIUS = 4;
+
 interface ChatBubbleProps {
   message: ChatMessage;
   isMe: boolean;
@@ -26,6 +30,9 @@ interface ChatBubbleProps {
   onReply: (message: ChatMessage) => void;
   onDelete: (messageId: string) => void;
   onReact: (messageId: string, emoji: string) => void;
+  isFirstInGroup: boolean;
+  isLastInGroup: boolean;
+  showTimestamp: boolean;
 }
 
 function getDisplayText(text: string): string {
@@ -65,6 +72,43 @@ function groupReactions(
   }));
 }
 
+function getBubbleRadii(isMe: boolean, isFirstInGroup: boolean, isLastInGroup: boolean) {
+  // Base: all corners rounded
+  let topLeft = BUBBLE_RADIUS;
+  let topRight = BUBBLE_RADIUS;
+  let bottomLeft = BUBBLE_RADIUS;
+  let bottomRight = BUBBLE_RADIUS;
+
+  if (isMe) {
+    // For "me" bubbles, the tail is bottom-right
+    if (!isFirstInGroup) {
+      topRight = BUBBLE_RADIUS_GROUPED;
+    }
+    if (!isLastInGroup) {
+      bottomRight = BUBBLE_RADIUS_GROUPED;
+    } else {
+      bottomRight = BUBBLE_TAIL_RADIUS;
+    }
+  } else {
+    // For partner bubbles, the tail is bottom-left
+    if (!isFirstInGroup) {
+      topLeft = BUBBLE_RADIUS_GROUPED;
+    }
+    if (!isLastInGroup) {
+      bottomLeft = BUBBLE_RADIUS_GROUPED;
+    } else {
+      bottomLeft = BUBBLE_TAIL_RADIUS;
+    }
+  }
+
+  return {
+    borderTopLeftRadius: topLeft,
+    borderTopRightRadius: topRight,
+    borderBottomLeftRadius: bottomLeft,
+    borderBottomRightRadius: bottomRight,
+  };
+}
+
 export function ChatBubble({
   message,
   isMe,
@@ -74,6 +118,9 @@ export function ChatBubble({
   onReply,
   onDelete,
   onReact,
+  isFirstInGroup,
+  isLastInGroup,
+  showTimestamp,
 }: ChatBubbleProps) {
   const [showMenu, setShowMenu] = useState(false);
   const translateX = useSharedValue(0);
@@ -88,7 +135,6 @@ export function ChatBubble({
     .activeOffsetX(15)
     .failOffsetY([-10, 10])
     .onUpdate((e) => {
-      // Swipe right only (positive translationX), capped
       const clamped = Math.min(Math.max(e.translationX, 0), SWIPE_MAX);
       translateX.value = clamped;
     })
@@ -110,15 +156,28 @@ export function ChatBubble({
   // --- Reaction chips ---
   const grouped = reactions?.reactions ? groupReactions(reactions.reactions) : [];
 
+  const bubbleRadii = getBubbleRadii(isMe, isFirstInGroup, isLastInGroup);
+  const verticalMargin = isLastInGroup ? spacing.xs : 2;
+
   return (
-    <View style={[styles.row, isMe ? styles.rowMe : styles.rowPartner]}>
+    <View
+      style={[
+        styles.row,
+        isMe ? styles.rowMe : styles.rowPartner,
+        { marginBottom: verticalMargin, marginTop: isFirstInGroup ? spacing.xs : 0 },
+      ]}
+    >
       <GestureDetector gesture={panGesture}>
-        <Animated.View style={styles.swipeContainer}>
+        <Animated.View
+          style={[
+            styles.swipeContainer,
+            isMe ? styles.swipeContainerMe : styles.swipeContainerPartner,
+          ]}
+        >
           {/* Reply arrow behind the bubble */}
           <Animated.View
             style={[
               styles.replyIcon,
-              isMe ? styles.replyIconMe : styles.replyIconPartner,
               replyIconAnimatedStyle,
             ]}
           >
@@ -126,7 +185,7 @@ export function ChatBubble({
           </Animated.View>
 
           {/* Sliding bubble content */}
-          <Animated.View style={[{ maxWidth: '80%' }, bubbleAnimatedStyle]}>
+          <Animated.View style={[styles.bubbleWrapper, bubbleAnimatedStyle]}>
             <Pressable
               onLongPress={() => setShowMenu(true)}
               delayLongPress={400}
@@ -135,9 +194,42 @@ export function ChatBubble({
               }}
             >
               <View
-                style={[styles.bubble, isMe ? styles.bubbleMe : styles.bubblePartner]}
+                style={[
+                  styles.bubble,
+                  isMe ? styles.bubbleMe : styles.bubblePartner,
+                  bubbleRadii,
+                ]}
               >
-                {!isMe && <Text style={styles.senderName}>{senderName}</Text>}
+                {/* Sender name + tag inline for partner; tag only for me */}
+                {((!isMe && isFirstInGroup) || message.tag) && (
+                  <View style={styles.nameTagRow}>
+                    {!isMe && isFirstInGroup && (
+                      <Text style={styles.senderName}>{senderName}</Text>
+                    )}
+                    {message.tag && (
+                      <View
+                        style={[
+                          styles.tagPill,
+                          message.tag === 'idea' ? styles.tagIdea : styles.tagBug,
+                        ]}
+                      >
+                        <Ionicons
+                          name={message.tag === 'idea' ? 'bulb-outline' : 'bug-outline'}
+                          size={12}
+                          color={message.tag === 'idea' ? '#2563EB' : '#DC2626'}
+                        />
+                        <Text
+                          style={[
+                            styles.tagText,
+                            message.tag === 'idea' ? styles.tagTextIdea : styles.tagTextBug,
+                          ]}
+                        >
+                          {message.tag === 'idea' ? 'Idea' : 'Bug'}
+                        </Text>
+                      </View>
+                    )}
+                  </View>
+                )}
 
                 {/* Reply preview */}
                 {message.replyTo && (
@@ -167,97 +259,17 @@ export function ChatBubble({
                   </View>
                 )}
 
-                {/* Tag pill */}
-                {message.tag && (
-                  <View
-                    style={[
-                      styles.tagPill,
-                      message.tag === 'idea' ? styles.tagIdea : styles.tagBug,
-                    ]}
-                  >
-                    <Ionicons
-                      name={message.tag === 'idea' ? 'bulb-outline' : 'bug-outline'}
-                      size={12}
-                      color={message.tag === 'idea' ? '#2563EB' : '#DC2626'}
-                    />
-                    <Text
-                      style={[
-                        styles.tagText,
-                        message.tag === 'idea' ? styles.tagTextIdea : styles.tagTextBug,
-                      ]}
-                    >
-                      {message.tag === 'idea' ? 'Idea' : 'Bug'}
-                    </Text>
-                  </View>
-                )}
-
                 <Text style={[styles.messageText, isMe && styles.messageTextMe]}>
                   {displayText}
                 </Text>
 
-                <Text style={[styles.timestamp, isMe && styles.timestampMe]}>
-                  {formatTime(message.timestamp)}
-                </Text>
+                {showTimestamp && (
+                  <Text style={[styles.timestamp, isMe && styles.timestampMe]}>
+                    {formatTime(message.timestamp)}
+                  </Text>
+                )}
               </View>
             </Pressable>
-
-            {/* Context menu */}
-            {showMenu && (
-              <View
-                style={[
-                  styles.menu,
-                  isMe ? styles.menuMe : styles.menuPartner,
-                ]}
-              >
-                {/* Quick emoji row */}
-                <View style={styles.emojiRow}>
-                  {QUICK_EMOJIS.map((emoji) => (
-                    <TouchableOpacity
-                      key={emoji}
-                      style={styles.emojiButton}
-                      onPress={() => {
-                        onReact(message.id, emoji);
-                        setShowMenu(false);
-                      }}
-                      activeOpacity={0.6}
-                    >
-                      <Text style={styles.emojiText}>{emoji}</Text>
-                    </TouchableOpacity>
-                  ))}
-                </View>
-
-                {/* Action buttons */}
-                <View style={styles.menuActions}>
-                  <TouchableOpacity
-                    style={styles.menuAction}
-                    onPress={() => {
-                      onReply(message);
-                      setShowMenu(false);
-                    }}
-                    activeOpacity={0.6}
-                  >
-                    <Ionicons name="arrow-undo-outline" size={16} color={colors.textPrimary} />
-                    <Text style={styles.menuActionText}>Reply</Text>
-                  </TouchableOpacity>
-
-                  {isMe && (
-                    <TouchableOpacity
-                      style={styles.menuAction}
-                      onPress={() => {
-                        onDelete(message.id);
-                        setShowMenu(false);
-                      }}
-                      activeOpacity={0.6}
-                    >
-                      <Ionicons name="trash-outline" size={16} color={colors.error} />
-                      <Text style={[styles.menuActionText, { color: colors.error }]}>
-                        Delete
-                      </Text>
-                    </TouchableOpacity>
-                  )}
-                </View>
-              </View>
-            )}
 
             {/* Reaction chips */}
             {grouped.length > 0 && (
@@ -291,13 +303,72 @@ export function ChatBubble({
           </Animated.View>
         </Animated.View>
       </GestureDetector>
+
+      {/* Context menu as Modal overlay */}
+      <Modal
+        visible={showMenu}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowMenu(false)}
+      >
+        <Pressable style={styles.modalBackdrop} onPress={() => setShowMenu(false)}>
+          <Pressable style={styles.modalMenu} onPress={(e) => e.stopPropagation()}>
+            {/* Quick emoji row */}
+            <View style={styles.emojiRow}>
+              {QUICK_EMOJIS.map((emoji) => (
+                <TouchableOpacity
+                  key={emoji}
+                  style={styles.emojiButton}
+                  onPress={() => {
+                    onReact(message.id, emoji);
+                    setShowMenu(false);
+                  }}
+                  activeOpacity={0.6}
+                >
+                  <Text style={styles.emojiText}>{emoji}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+
+            {/* Action buttons */}
+            <View style={styles.menuActions}>
+              <TouchableOpacity
+                style={styles.menuAction}
+                onPress={() => {
+                  onReply(message);
+                  setShowMenu(false);
+                }}
+                activeOpacity={0.6}
+              >
+                <Ionicons name="arrow-undo-outline" size={16} color={colors.textPrimary} />
+                <Text style={styles.menuActionText}>Reply</Text>
+              </TouchableOpacity>
+
+              {isMe && (
+                <TouchableOpacity
+                  style={styles.menuAction}
+                  onPress={() => {
+                    onDelete(message.id);
+                    setShowMenu(false);
+                  }}
+                  activeOpacity={0.6}
+                >
+                  <Ionicons name="trash-outline" size={16} color={colors.error} />
+                  <Text style={[styles.menuActionText, { color: colors.error }]}>
+                    Delete
+                  </Text>
+                </TouchableOpacity>
+              )}
+            </View>
+          </Pressable>
+        </Pressable>
+      </Modal>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   row: {
-    marginVertical: spacing.xs,
     paddingHorizontal: spacing.sm,
   },
   rowMe: {
@@ -307,41 +378,47 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
   },
   swipeContainer: {
-    width: '100%',
+    maxWidth: '80%',
     position: 'relative',
+  },
+  swipeContainerMe: {
+    alignItems: 'flex-end',
+  },
+  swipeContainerPartner: {
+    alignItems: 'flex-start',
   },
   replyIcon: {
     position: 'absolute',
     top: '50%',
+    left: -28,
     marginTop: -10,
     zIndex: -1,
   },
-  replyIconMe: {
-    left: 0,
-  },
-  replyIconPartner: {
-    left: 0,
+  bubbleWrapper: {
+    // No width constraint here -- the bubble itself sizes to content
   },
   bubble: {
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
-    borderRadius: borderRadius.md,
   },
   bubbleMe: {
-    backgroundColor: colors.textPrimary,
-    borderBottomRightRadius: 4,
+    backgroundColor: '#3B82F6',
   },
   bubblePartner: {
-    backgroundColor: colors.surface,
-    borderBottomLeftRadius: 4,
-    borderWidth: 1,
-    borderColor: colors.border,
+    backgroundColor: '#F3F4F6',
+  },
+
+  // Name + tag inline row
+  nameTagRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginBottom: 2,
   },
   senderName: {
     ...typography.xs,
     fontWeight: fontWeights.semibold,
     color: colors.textSecondary,
-    marginBottom: 2,
   },
 
   // Reply preview inside bubble
@@ -354,11 +431,11 @@ const styles = StyleSheet.create({
   },
   replyPreviewMe: {
     borderLeftColor: 'rgba(255,255,255,0.4)',
-    backgroundColor: 'rgba(255,255,255,0.1)',
+    backgroundColor: 'rgba(255,255,255,0.15)',
   },
   replyPreviewPartner: {
     borderLeftColor: colors.textTertiary,
-    backgroundColor: '#F3F4F6',
+    backgroundColor: '#E5E7EB',
   },
   replyPreviewSender: {
     ...typography.xs,
@@ -366,7 +443,7 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
   },
   replyPreviewSenderMe: {
-    color: 'rgba(255,255,255,0.7)',
+    color: 'rgba(255,255,255,0.8)',
   },
   replyPreviewText: {
     ...typography.xs,
@@ -374,19 +451,17 @@ const styles = StyleSheet.create({
     marginTop: 1,
   },
   replyPreviewTextMe: {
-    color: 'rgba(255,255,255,0.5)',
+    color: 'rgba(255,255,255,0.6)',
   },
 
   // Tag pill
   tagPill: {
     flexDirection: 'row',
     alignItems: 'center',
-    alignSelf: 'flex-start',
     gap: 4,
     paddingHorizontal: spacing.sm,
     paddingVertical: 2,
     borderRadius: borderRadius.sm,
-    marginBottom: spacing.xs,
   },
   tagIdea: {
     backgroundColor: '#DBEAFE',
@@ -422,26 +497,24 @@ const styles = StyleSheet.create({
     color: 'rgba(255,255,255,0.6)',
   },
 
-  // Context menu
-  menu: {
-    marginTop: spacing.xs,
+  // Modal context menu
+  modalBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.4)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalMenu: {
     backgroundColor: colors.surface,
-    borderRadius: borderRadius.sm,
-    borderWidth: 1,
-    borderColor: colors.border,
-    paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.sm,
+    borderRadius: borderRadius.md,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.md,
+    minWidth: 220,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.12,
-    shadowRadius: 8,
-    elevation: 4,
-  },
-  menuMe: {
-    alignSelf: 'flex-end',
-  },
-  menuPartner: {
-    alignSelf: 'flex-start',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 12,
+    elevation: 8,
   },
   emojiRow: {
     flexDirection: 'row',
@@ -450,15 +523,15 @@ const styles = StyleSheet.create({
     marginBottom: spacing.sm,
   },
   emojiButton: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     backgroundColor: colors.background,
     alignItems: 'center',
     justifyContent: 'center',
   },
   emojiText: {
-    fontSize: 18,
+    fontSize: 20,
   },
   menuActions: {
     borderTopWidth: 1,
@@ -470,8 +543,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm,
-    paddingVertical: spacing.xs,
+    paddingVertical: spacing.sm,
     paddingHorizontal: spacing.xs,
+    borderRadius: borderRadius.sm,
   },
   menuActionText: {
     ...typography.sm,
