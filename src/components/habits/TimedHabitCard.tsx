@@ -5,7 +5,6 @@ import Animated, {
   useAnimatedStyle,
   withTiming,
   withSpring,
-  runOnJS,
 } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
 import * as Notifications from 'expo-notifications';
@@ -24,6 +23,7 @@ const RING_SIZE = 48;
 const RING_RADIUS = 20;
 const RING_STROKE = 3;
 const CIRCUMFERENCE = 2 * Math.PI * RING_RADIUS;
+const HOLD_DURATION = 500;
 
 function formatTime(seconds: number): string {
   const m = Math.floor(seconds / 60);
@@ -40,8 +40,7 @@ export function TimedHabitCard({ definition, data, onToggle }: TimedHabitCardPro
   const startedAtRef = useRef<number | null>(null);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
   const notifIdRef = useRef<string | null>(null);
-  const holdTimer = useRef<NodeJS.Timeout | null>(null);
-  const isHolding = useRef(false);
+  const longPressTriggered = useRef(false);
   const cardScale = useSharedValue(1);
   const fillProgress = useSharedValue(0);
 
@@ -128,45 +127,50 @@ export function TimedHabitCard({ definition, data, onToggle }: TimedHabitCardPro
     }
   }, [completed, running, duration, tick, definition.label]);
 
-  const HOLD_DURATION = 500;
+  const handleLongPress = useCallback(() => {
+    if (completed) return;
+    longPressTriggered.current = true;
 
-  const triggerSkipComplete = useCallback(() => {
+    // Clean up timer if it was running
+    if (intervalRef.current) {
+      clearInterval(intervalRef.current);
+      intervalRef.current = null;
+    }
+    startedAtRef.current = null;
+    setRunning(false);
+    if (notifIdRef.current) {
+      Notifications.cancelScheduledNotificationAsync(notifIdRef.current);
+      notifIdRef.current = null;
+    }
+
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     onToggle();
     fillProgress.value = withTiming(0, { duration: 200 });
     cardScale.value = withSpring(1);
-  }, [onToggle]);
+  }, [completed, onToggle]);
 
   const handlePressIn = useCallback(() => {
-    if (completed || running) {
+    longPressTriggered.current = false;
+    if (completed) {
       cardScale.value = withSpring(0.97);
       return;
     }
-    // Start hold-to-complete
-    isHolding.current = true;
     cardScale.value = withTiming(0.97, { duration: 100 });
     fillProgress.value = withTiming(1, { duration: HOLD_DURATION });
-
-    holdTimer.current = setTimeout(() => {
-      if (isHolding.current) {
-        runOnJS(triggerSkipComplete)();
-      }
-    }, HOLD_DURATION);
-  }, [completed, running, triggerSkipComplete]);
+  }, [completed]);
 
   const handlePressOut = useCallback(() => {
-    isHolding.current = false;
-    if (holdTimer.current) {
-      clearTimeout(holdTimer.current);
-      holdTimer.current = null;
-    }
-    if (!completed) {
+    if (!completed && !longPressTriggered.current) {
       fillProgress.value = withTiming(0, { duration: 150 });
     }
     cardScale.value = withSpring(1);
   }, [completed]);
 
   const handleTap = useCallback(() => {
+    if (longPressTriggered.current) {
+      longPressTriggered.current = false;
+      return;
+    }
     if (completed) {
       // Undo
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -193,6 +197,8 @@ export function TimedHabitCard({ definition, data, onToggle }: TimedHabitCardPro
       onPress={handleTap}
       onPressIn={handlePressIn}
       onPressOut={handlePressOut}
+      onLongPress={handleLongPress}
+      delayLongPress={HOLD_DURATION}
     >
       <Animated.View
         style={[

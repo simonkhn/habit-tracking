@@ -6,7 +6,7 @@ import {
   updatePersonalHabit,
   subscribeToPersonalLog,
 } from '../services/firestore';
-import { getTodayDateString } from '../utils/dates';
+import { getHabitDateString } from '../utils/dates';
 import { useAuthStore } from '../stores/authStore';
 
 export function usePersonalHabits() {
@@ -14,7 +14,7 @@ export function usePersonalHabits() {
   const [log, setLog] = useState<PersonalHabitLog | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  const date = getTodayDateString();
+  const date = getHabitDateString(profile?.wakeUpTime ?? '06:00');
   const userId = user?.uid;
   const personalHabits = profile?.personalHabits ?? [];
 
@@ -24,7 +24,7 @@ export function usePersonalHabits() {
       return;
     }
 
-    getOrCreatePersonalLog(userId);
+    getOrCreatePersonalLog(userId, date);
 
     const unsubscribe = subscribeToPersonalLog(userId, date, (data) => {
       setLog(data);

@@ -1,15 +1,14 @@
 import firestore from '@react-native-firebase/firestore';
 import { HabitLog, DayHabits, HabitId, HabitData, PersonalHabitLog, FeedInteraction, FeedComment } from '../types/habit';
 import { createEmptyDayHabits } from '../config/habits';
-import { getHabitLogId, getTodayDateString } from '../utils/dates';
+import { getHabitLogId } from '../utils/dates';
 
 export function getHabitLogRef(userId: string, date: string) {
   const docId = getHabitLogId(userId, date);
   return firestore().collection('habitLogs').doc(docId);
 }
 
-export async function getOrCreateTodayLog(userId: string): Promise<HabitLog> {
-  const date = getTodayDateString();
+export async function getOrCreateTodayLog(userId: string, date: string): Promise<HabitLog> {
   const ref = getHabitLogRef(userId, date);
   const doc = await ref.get();
 
@@ -83,8 +82,7 @@ function getPersonalHabitLogRef(userId: string, date: string) {
   return firestore().collection('personalHabitLogs').doc(`${userId}_${date}`);
 }
 
-export async function getOrCreatePersonalLog(userId: string): Promise<PersonalHabitLog> {
-  const date = getTodayDateString();
+export async function getOrCreatePersonalLog(userId: string, date: string): Promise<PersonalHabitLog> {
   const ref = getPersonalHabitLogRef(userId, date);
   const doc = await ref.get();
 

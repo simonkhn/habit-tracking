@@ -87,11 +87,12 @@ export function calculatePairStreak(
 export function getLast7DayCompletions(
   logs: HabitLog[],
   habitId: HabitId,
-  days: number = 7
+  days: number = 7,
+  referenceDate: Date = new Date()
 ): boolean[] {
   const logMap = new Map(logs.map((l) => [l.date, l]));
   const result: boolean[] = [];
-  const today = new Date();
+  const today = referenceDate;
   for (let i = days - 1; i >= 0; i--) {
     const date = format(subDays(today, i), 'yyyy-MM-dd');
     const log = logMap.get(date);
@@ -102,10 +103,11 @@ export function getLast7DayCompletions(
 
 export function calculateWeeklyTrend(
   logs: HabitLog[],
-  habitId: HabitId
+  habitId: HabitId,
+  referenceDate: Date = new Date()
 ): 'up' | 'down' | 'flat' {
   const logMap = new Map(logs.map((l) => [l.date, l]));
-  const today = new Date();
+  const today = referenceDate;
 
   let thisWeekCount = 0;
   let lastWeekCount = 0;

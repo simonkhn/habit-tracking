@@ -3,7 +3,7 @@ import { HabitLog, HabitId } from '../types/habit';
 import { OverallStats, HabitStreak, DayStats } from '../types/stats';
 import { HABIT_ORDER, CHALLENGE_TOTAL_DAYS } from '../config/habits';
 import { getHabitLogs } from '../services/firestore';
-import { getDayNumber, getTodayDateString } from '../utils/dates';
+import { getDayNumber, getHabitDate } from '../utils/dates';
 import { calculateStreak, calculateCompletionRate } from '../utils/streaks';
 import { useAuthStore } from '../stores/authStore';
 import { format, subDays } from 'date-fns';
@@ -21,12 +21,13 @@ export function useStats() {
 
     async function loadStats() {
       try {
-        const endDate = getTodayDateString();
-        const startDate = format(subDays(new Date(), 90), 'yyyy-MM-dd');
+        const habitDate = getHabitDate(profile!.wakeUpTime);
+        const endDate = format(habitDate, 'yyyy-MM-dd');
+        const startDate = format(subDays(habitDate, 90), 'yyyy-MM-dd');
 
         const logs = await getHabitLogs(user!.uid, startDate, endDate);
 
-        const dayNumber = getDayNumber(profile!.challengeStartDate);
+        const dayNumber = getDayNumber(profile!.challengeStartDate, profile!.wakeUpTime);
 
         const dailyStats: DayStats[] = logs.map((log) => ({
           date: log.date,

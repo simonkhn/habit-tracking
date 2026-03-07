@@ -2,7 +2,6 @@ import React from 'react';
 import { View, Text, StyleSheet, Pressable } from 'react-native';
 import { colors, typography, fontWeights, spacing, borderRadius } from '../../theme';
 import { PairDayResult } from '../../types/stats';
-import { getTodayDateString } from '../../utils/dates';
 
 interface ChunkGridProps {
   pairDayResults: PairDayResult[];
@@ -11,6 +10,7 @@ interface ChunkGridProps {
   dayNumber: number;
   chunkNumber: number;
   onDayPress?: (date: string) => void;
+  today: string;
 }
 
 const CELL_SIZE = 48;
@@ -52,8 +52,9 @@ export function ChunkGrid({
   dayNumber,
   chunkNumber,
   onDayPress,
+  today,
 }: ChunkGridProps) {
-  const todayStr = getTodayDateString();
+  const todayStr = today;
 
   const rows: PairDayResult[][] = [];
   for (let i = 0; i < 25; i += 5) {

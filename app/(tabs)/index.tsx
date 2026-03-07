@@ -12,7 +12,7 @@ import { usePersonalHabits } from '../../src/hooks/usePersonalHabits';
 import { usePartnerHabits } from '../../src/hooks/usePartnerHabits';
 import { useAuthStore } from '../../src/stores/authStore';
 import { HABIT_ORDER, CHALLENGE_TOTAL_DAYS } from '../../src/config/habits';
-import { getDayNumber, formatDateHeader, getTodayDateString } from '../../src/utils/dates';
+import { getDayNumber, formatDateHeader, getHabitDateString } from '../../src/utils/dates';
 import { colors, typography, fontWeights, spacing, borderRadius } from '../../src/theme';
 
 export default function TodayScreen() {
@@ -36,8 +36,8 @@ export default function TodayScreen() {
   const [showCelebration, setShowCelebration] = useState(false);
   const [prevCompletedCount, setPrevCompletedCount] = useState(0);
 
-  const dayNumber = profile ? getDayNumber(profile.challengeStartDate) : 1;
-  const today = formatDateHeader(getTodayDateString());
+  const dayNumber = profile ? getDayNumber(profile.challengeStartDate, profile.wakeUpTime) : 1;
+  const today = formatDateHeader(getHabitDateString(profile?.wakeUpTime ?? '06:00'));
 
   // Trigger celebration when all habits completed
   useEffect(() => {

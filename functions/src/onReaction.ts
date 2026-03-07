@@ -35,7 +35,12 @@ export const onReaction = functions.firestore
       (key) => !beforeReactions[key]
     );
 
-    if (newReactionKeys.length === 0) return;
+    // Check for new comments
+    const beforeComments: any[] = before?.comments || [];
+    const afterComments: any[] = after.comments || [];
+    const newComments = afterComments.slice(beforeComments.length);
+
+    if (newReactionKeys.length === 0 && newComments.length === 0) return;
 
     // Parse event ID: {userId}_{date}_{habitId}
     const eventId = context.params.eventId;
@@ -76,7 +81,7 @@ export const onReaction = functions.firestore
 
       if (!ownerData?.expoPushToken) {
         console.log('[onReaction] Event owner has no push token — skipping');
-        return;
+        continue;
       }
 
       const message: ExpoPushMessage = {
@@ -96,6 +101,54 @@ export const onReaction = functions.firestore
         );
       } catch (error) {
         console.error('[onReaction] Error sending push notification:', error);
+      }
+    }
+
+    // Send notifications for new comments
+    for (const comment of newComments) {
+      if (!comment?.userId || comment.userId === eventOwnerId) {
+        continue;
+      }
+
+      const commenterId = comment.userId;
+
+      const commenterDoc = await admin
+        .firestore()
+        .collection('users')
+        .doc(commenterId)
+        .get();
+      const commenterData = commenterDoc.data();
+      const commenterName = commenterData?.displayName || 'Your partner';
+
+      const ownerDoc = await admin
+        .firestore()
+        .collection('users')
+        .doc(eventOwnerId)
+        .get();
+      const ownerData = ownerDoc.data();
+
+      if (!ownerData?.expoPushToken) {
+        console.log('[onReaction] Event owner has no push token for comment — skipping');
+        continue;
+      }
+
+      const commentMessage: ExpoPushMessage = {
+        to: ownerData.expoPushToken,
+        sound: 'default',
+        title: `${commenterName} commented`,
+        body: habitId === 'allComplete'
+          ? `${commenterName} commented on you completing all habits: "${comment.text}"`
+          : `${commenterName} commented on your ${habitLabel}: "${comment.text}"`,
+      };
+
+      try {
+        const tickets = await expo.sendPushNotificationsAsync([commentMessage]);
+        console.log(
+          `[onReaction] Sent comment notification to ${eventOwnerId}`,
+          JSON.stringify(tickets)
+        );
+      } catch (error) {
+        console.error('[onReaction] Error sending comment notification:', error);
       }
     }
   });

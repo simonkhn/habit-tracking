@@ -9,7 +9,7 @@ import {
 } from '../types/stats';
 import { HABIT_ORDER, CHALLENGE_TOTAL_DAYS, CHUNK_SIZE_DAYS } from '../config/habits';
 import { getHabitLogs } from '../services/firestore';
-import { getDayNumber, getChunkNumber, getTodayDateString } from '../utils/dates';
+import { getDayNumber, getChunkNumber, getHabitDate } from '../utils/dates';
 import {
   calculateStreak,
   calculateCompletionRate,
@@ -60,8 +60,9 @@ export function useSharedStats() {
 
     async function load() {
       try {
-        const today = getTodayDateString();
-        const startDate = format(subDays(new Date(), 89), 'yyyy-MM-dd');
+        const habitDate = getHabitDate(profile!.wakeUpTime);
+        const today = format(habitDate, 'yyyy-MM-dd');
+        const startDate = format(subDays(habitDate, 89), 'yyyy-MM-dd');
 
         const [myLogs, partnerLogs] = await Promise.all([
           getHabitLogs(userId!, startDate, today),
@@ -70,7 +71,7 @@ export function useSharedStats() {
             : Promise.resolve([] as HabitLog[]),
         ]);
 
-        const dayNumber = Math.max(1, getDayNumber(profile!.challengeStartDate));
+        const dayNumber = Math.max(1, getDayNumber(profile!.challengeStartDate, profile!.wakeUpTime));
         const chunkNumber = getChunkNumber(dayNumber);
 
         // My stats
@@ -89,7 +90,7 @@ export function useSharedStats() {
 
         // Chunk grid: build PairDayResult for current 25-day chunk
         const chunkStartDayOffset = dayNumber - ((chunkNumber - 1) * CHUNK_SIZE_DAYS + 1);
-        const chunkStartDate = subDays(new Date(), chunkStartDayOffset);
+        const chunkStartDate = subDays(habitDate, chunkStartDayOffset);
         const myLogMap = new Map(myLogs.map((l) => [l.date, l]));
         const partnerLogMap = new Map(partnerLogs.map((l) => [l.date, l]));
 
@@ -122,10 +123,10 @@ export function useSharedStats() {
             partnerStreak: { current: pSt.currentStreak, longest: pSt.longestStreak },
             myCompletionRate: mySt.completionRate,
             partnerCompletionRate: pSt.completionRate,
-            myLast7Days: getLast7DayCompletions(myLogs, habitId),
-            partnerLast7Days: getLast7DayCompletions(partnerLogs, habitId),
-            myTrend: calculateWeeklyTrend(myLogs, habitId),
-            partnerTrend: calculateWeeklyTrend(partnerLogs, habitId),
+            myLast7Days: getLast7DayCompletions(myLogs, habitId, 7, habitDate),
+            partnerLast7Days: getLast7DayCompletions(partnerLogs, habitId, 7, habitDate),
+            myTrend: calculateWeeklyTrend(myLogs, habitId, habitDate),
+            partnerTrend: calculateWeeklyTrend(partnerLogs, habitId, habitDate),
           };
         });
 
