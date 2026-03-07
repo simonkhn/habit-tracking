@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -10,7 +10,7 @@ import {
   Keyboard,
   ActivityIndicator,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { Ionicons } from '@expo/vector-icons';
@@ -27,24 +27,33 @@ const FILTERS: { label: string; value: ChatTag | null }[] = [
 
 export default function ChatScreen() {
   const tabBarHeight = useBottomTabBarHeight();
-  const [keyboardPadding, setKeyboardPadding] = useState(0);
+  const insets = useSafeAreaInsets();
+  const flatListRef = useRef<FlatList>(null);
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
 
   useEffect(() => {
     const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
     const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
 
     const showSub = Keyboard.addListener(showEvent, (e) => {
-      setKeyboardPadding(e.endCoordinates.height - tabBarHeight);
+      setKeyboardHeight(e.endCoordinates.height);
     });
     const hideSub = Keyboard.addListener(hideEvent, () => {
-      setKeyboardPadding(0);
+      setKeyboardHeight(0);
     });
 
     return () => {
       showSub.remove();
       hideSub.remove();
     };
-  }, [tabBarHeight]);
+  }, []);
+
+  // On Android with edge-to-edge, the system may not resize the window.
+  // We calculate the padding ourselves: keyboard height minus the tab bar
+  // (which the keyboard covers) minus the bottom inset (nav bar).
+  const keyboardPadding = keyboardHeight > 0
+    ? Math.max(0, keyboardHeight - tabBarHeight)
+    : 0;
 
   const {
     messages,

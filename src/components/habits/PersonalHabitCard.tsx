@@ -1,11 +1,11 @@
-import React, { useCallback, useRef } from 'react';
-import { View, Text, StyleSheet, Pressable } from 'react-native';
+import React, { useCallback } from 'react';
+import { View, Text, StyleSheet } from 'react-native';
+import { Pressable } from 'react-native-gesture-handler';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
   withTiming,
   withSpring,
-  runOnJS,
 } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
 import { PersonalHabitDefinition, HabitData } from '../../types/habit';
@@ -24,42 +24,30 @@ export function PersonalHabitCard({ definition, data, onToggle }: PersonalHabitC
   const completed = data?.completed ?? false;
   const fillProgress = useSharedValue(0);
   const cardScale = useSharedValue(1);
-  const holdTimer = useRef<NodeJS.Timeout | null>(null);
-  const isHolding = useRef(false);
 
-  const triggerComplete = useCallback(() => {
+  // RNGH Pressable: onPress does NOT fire after onLongPress, so no guard needed
+  const handleLongPress = useCallback(() => {
+    if (completed) return;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     onToggle();
     fillProgress.value = withTiming(0, { duration: 200 });
     cardScale.value = withSpring(1);
-  }, [onToggle]);
+  }, [completed, onToggle]);
 
   const handlePressIn = useCallback(() => {
     if (completed) return;
-    isHolding.current = true;
     cardScale.value = withTiming(0.97, { duration: 100 });
     fillProgress.value = withTiming(1, { duration: HOLD_DURATION });
-
-    holdTimer.current = setTimeout(() => {
-      if (isHolding.current) {
-        runOnJS(triggerComplete)();
-      }
-    }, HOLD_DURATION);
-  }, [completed, triggerComplete]);
+  }, [completed]);
 
   const handlePressOut = useCallback(() => {
-    isHolding.current = false;
-    if (holdTimer.current) {
-      clearTimeout(holdTimer.current);
-      holdTimer.current = null;
-    }
     if (!completed) {
       fillProgress.value = withTiming(0, { duration: 150 });
     }
     cardScale.value = withSpring(1);
   }, [completed]);
 
-  const handleTap = useCallback(() => {
+  const handlePress = useCallback(() => {
     if (completed) {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
       onToggle();
@@ -79,7 +67,9 @@ export function PersonalHabitCard({ definition, data, onToggle }: PersonalHabitC
     <Pressable
       onPressIn={handlePressIn}
       onPressOut={handlePressOut}
-      onPress={handleTap}
+      onPress={handlePress}
+      onLongPress={handleLongPress}
+      delayLongPress={HOLD_DURATION}
     >
       <Animated.View
         style={[
