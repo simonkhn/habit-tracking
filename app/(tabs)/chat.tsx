@@ -10,7 +10,8 @@ import {
   Platform,
   ActivityIndicator,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { Ionicons } from '@expo/vector-icons';
 import { useChat } from '../../src/hooks/useChat';
@@ -25,6 +26,8 @@ const FILTERS: { label: string; value: ChatTag | null }[] = [
 ];
 
 export default function ChatScreen() {
+  const tabBarHeight = useBottomTabBarHeight();
+  const insets = useSafeAreaInsets();
   const {
     messages,
     reactions,
@@ -83,7 +86,7 @@ export default function ChatScreen() {
         <KeyboardAvoidingView
           style={styles.flex}
           behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-          keyboardVerticalOffset={90}
+          keyboardVerticalOffset={tabBarHeight + insets.top}
         >
           <GestureHandlerRootView style={styles.flex}>
             <FlatList

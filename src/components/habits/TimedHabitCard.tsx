@@ -140,21 +140,32 @@ export function TimedHabitCard({ definition, data, onToggle }: TimedHabitCardPro
   }, [onToggle]);
 
   const handlePressIn = useCallback(() => {
-    if (completed || running) {
+    if (completed) {
       cardScale.value = withSpring(0.97);
       return;
     }
-    // Start hold-to-complete
+    // Start hold-to-complete (works whether timer is running or not)
     isHolding.current = true;
     cardScale.value = withTiming(0.97, { duration: 100 });
     fillProgress.value = withTiming(1, { duration: HOLD_DURATION });
 
     holdTimer.current = setTimeout(() => {
       if (isHolding.current) {
+        // Clean up timer if it was running
+        if (intervalRef.current) {
+          clearInterval(intervalRef.current);
+          intervalRef.current = null;
+        }
+        startedAtRef.current = null;
+        setRunning(false);
+        if (notifIdRef.current) {
+          Notifications.cancelScheduledNotificationAsync(notifIdRef.current);
+          notifIdRef.current = null;
+        }
         runOnJS(triggerSkipComplete)();
       }
     }, HOLD_DURATION);
-  }, [completed, running, triggerSkipComplete]);
+  }, [completed, triggerSkipComplete]);
 
   const handlePressOut = useCallback(() => {
     isHolding.current = false;

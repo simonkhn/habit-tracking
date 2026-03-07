@@ -78,6 +78,9 @@ function buildEventsFromLog(log: HabitLog, userName: string): FeedEvent[] {
       events[0].completedAt,
     );
 
+    // Add 1ms so "all complete" sorts after the last individual habit
+    const allCompleteTime = new Date(latestTime.getTime() + 1);
+
     events.push({
       id: getFeedEventId(log.userId, log.date, 'allComplete'),
       userId: log.userId,
@@ -88,7 +91,7 @@ function buildEventsFromLog(log: HabitLog, userName: string): FeedEvent[] {
       habitColor: '#FFD700',
       habitIcon: 'trophy-outline',
       habitType: 'allComplete',
-      completedAt: latestTime,
+      completedAt: allCompleteTime,
       flavorText: `${userName} completed all ${HABIT_ORDER.length} habits!`,
       interaction: null,
     });
