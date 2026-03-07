@@ -200,9 +200,30 @@ export function ChatBubble({
                   bubbleRadii,
                 ]}
               >
-                {/* Sender name for partner first-in-group */}
-                {!isMe && isFirstInGroup && (
-                  <Text style={styles.senderName}>{senderName}</Text>
+                {/* Sender name + tag for partner; tag only inline for own messages */}
+                {!isMe && (isFirstInGroup || message.tag) && (
+                  <View style={styles.nameTagRow}>
+                    {isFirstInGroup && (
+                      <Text style={styles.senderName}>{senderName}</Text>
+                    )}
+                    {message.tag && (
+                      <View
+                        style={[
+                          styles.tagPill,
+                          message.tag === 'idea' ? styles.tagIdea : styles.tagBug,
+                        ]}
+                      >
+                        <Text
+                          style={[
+                            styles.tagText,
+                            message.tag === 'idea' ? styles.tagTextIdea : styles.tagTextBug,
+                          ]}
+                        >
+                          {message.tag === 'idea' ? 'Idea' : 'Bug'}
+                        </Text>
+                      </View>
+                    )}
+                  </View>
                 )}
 
                 {/* Reply preview */}
@@ -233,9 +254,9 @@ export function ChatBubble({
                   </View>
                 )}
 
-                {/* Message text with inline tag */}
-                <View style={styles.messageRow}>
-                  {message.tag && (
+                {/* Message text — own messages get inline tag, partner tag is on name row */}
+                <View style={isMe && message.tag ? styles.messageRow : undefined}>
+                  {isMe && message.tag && (
                     <View
                       style={[
                         styles.tagPill,
@@ -402,12 +423,19 @@ const styles = StyleSheet.create({
     backgroundColor: '#F3F4F6',
   },
 
-  // Inline message row (tag + text on same line)
+  // Inline message row (tag + text on same line, for own messages)
   messageRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     alignItems: 'center',
     gap: 4,
+  },
+  // Name + tag row for partner messages
+  nameTagRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginBottom: 2,
   },
   senderName: {
     ...typography.xs,

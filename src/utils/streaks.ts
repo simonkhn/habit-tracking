@@ -6,15 +6,29 @@ import { getTodayDateString } from './dates';
 
 export function calculateStreak(
   logs: HabitLog[],
-  habitId: HabitId
+  habitId: HabitId,
+  today?: string
 ): { current: number; longest: number } {
   // Logs should be sorted by date descending
+  // Skip today when counting current streak — today is still in progress.
+  // If today is complete, it extends the streak; if not, don't break it.
   let current = 0;
   let longest = 0;
   let streak = 0;
   let countingCurrent = true;
+  let todayComplete = false;
 
   for (const log of logs) {
+    if (today && log.date === today) {
+      // Track today's status but don't let it break the streak
+      todayComplete = !!log.habits?.[habitId]?.completed;
+      if (todayComplete) {
+        streak++;
+        if (countingCurrent) current = streak;
+      }
+      continue;
+    }
+
     const habitData = log.habits?.[habitId];
     if (habitData?.completed) {
       streak++;
@@ -46,7 +60,8 @@ export function calculateDayCompletionCount(habits: HabitLog['habits']): number 
 
 export function calculatePairStreak(
   myLogs: HabitLog[],
-  partnerLogs: HabitLog[]
+  partnerLogs: HabitLog[],
+  today?: string
 ): { current: number; longest: number } {
   const myMap = new Map(myLogs.map((l) => [l.date, l]));
   const partnerMap = new Map(partnerLogs.map((l) => [l.date, l]));
@@ -69,6 +84,15 @@ export function calculatePairStreak(
     const partnerAllDone = partnerLog
       ? HABIT_ORDER.every((id) => partnerLog.habits?.[id]?.completed)
       : false;
+
+    if (today && date === today) {
+      // Today is still in progress — don't break the streak
+      if (myAllDone && partnerAllDone) {
+        streak++;
+        if (countingCurrent) current = streak;
+      }
+      continue;
+    }
 
     if (myAllDone && partnerAllDone) {
       streak++;

@@ -29,9 +29,9 @@ function buildDailyStats(logs: HabitLog[]): DayStats[] {
   }));
 }
 
-function buildHabitStreaks(logs: HabitLog[]): HabitStreak[] {
+function buildHabitStreaks(logs: HabitLog[], today?: string): HabitStreak[] {
   return HABIT_ORDER.map((habitId) => {
-    const { current, longest } = calculateStreak(logs, habitId);
+    const { current, longest } = calculateStreak(logs, habitId, today);
     const rate = calculateCompletionRate(logs, habitId);
     return { habitId, currentStreak: current, longestStreak: longest, completionRate: rate };
   });
@@ -146,21 +146,21 @@ export function useSharedStats() {
 
     // My stats
     const myDailyStats = buildDailyStats(myLogs);
-    const myHabitStreaks = buildHabitStreaks(myLogs);
+    const myHabitStreaks = buildHabitStreaks(myLogs, today);
     const myTodayCompletedCount = getTodayCompletedCount(myLogs, today);
     const myTodayCompletedHabits = getTodayCompletedHabits(myLogs, today);
     const myTodayHabitInfos = getTodayHabitInfos(myLogs, today);
 
     // Partner stats
     const partnerDailyStats = buildDailyStats(partnerLogs);
-    const partnerHabitStreaks = buildHabitStreaks(partnerLogs);
+    const partnerHabitStreaks = buildHabitStreaks(partnerLogs, today);
     const partnerTodayCompletedCount = getTodayCompletedCount(partnerLogs, today);
     const partnerTodayCompletedHabits = getTodayCompletedHabits(partnerLogs, today);
     const partnerTodayHabitInfos = getTodayHabitInfos(partnerLogs, today);
 
     // Pair streak
     const { current: pairStreak, longest: longestPairStreak } =
-      calculatePairStreak(myLogs, partnerLogs);
+      calculatePairStreak(myLogs, partnerLogs, today);
 
     // Chunk grid: build PairDayResult for current 25-day chunk
     const chunkStartDayOffset = dayNumber - ((chunkNumber - 1) * CHUNK_SIZE_DAYS + 1);
