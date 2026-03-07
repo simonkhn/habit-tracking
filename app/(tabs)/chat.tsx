@@ -135,6 +135,7 @@ function buildListItems(messages: ChatMessage[]): ChatListItem[] {
 
 export default function ChatScreen() {
   const flatListRef = useRef<FlatList>(null);
+  const tabBarHeight = useBottomTabBarHeight();
 
   const {
     messages,
@@ -227,7 +228,11 @@ export default function ChatScreen() {
           <ActivityIndicator size="large" color={colors.textPrimary} />
         </View>
       ) : (
-        <View style={styles.flex}>
+        <KeyboardAvoidingView
+          style={styles.flex}
+          behavior="padding"
+          keyboardVerticalOffset={tabBarHeight}
+        >
           <GestureHandlerRootView style={styles.flex}>
             <FlatList
               ref={flatListRef}
@@ -297,7 +302,7 @@ export default function ChatScreen() {
               />
             </TouchableOpacity>
           </View>
-        </View>
+        </KeyboardAvoidingView>
       )}
     </SafeAreaView>
   );

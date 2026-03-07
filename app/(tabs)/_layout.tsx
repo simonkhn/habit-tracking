@@ -47,6 +47,7 @@ export default function TabsLayout() {
         name="chat"
         options={{
           title: 'Chat',
+          tabBarHideOnKeyboard: true,
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="chatbox-outline" size={size} color={color} />
           ),
