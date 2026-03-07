@@ -4,7 +4,7 @@ import { ScreenContainer } from '../../src/components/ui/ScreenContainer';
 import { DualRingHero } from '../../src/components/stats/DualRingHero';
 import { PairStreakBanner } from '../../src/components/stats/PairStreakBanner';
 import { ChunkGrid } from '../../src/components/stats/ChunkGrid';
-import { HabitComparisonCard } from '../../src/components/stats/HabitComparisonCard';
+import { HabitBreakdownTable } from '../../src/components/stats/HabitComparisonCard';
 import { BadgeShelf } from '../../src/components/stats/BadgeShelf';
 import { DayDetailSheet } from '../../src/components/stats/DayDetailSheet';
 import { useSharedStats } from '../../src/hooks/useSharedStats';
@@ -47,6 +47,21 @@ export default function StatsScreen() {
     };
   }, [selectedDate, myLogs, partnerLogs, profile, wakeUpTime]);
 
+  // Derived badge props
+  const bestHabitStreak = useMemo(() => {
+    if (!stats) return 0;
+    return Math.max(
+      ...stats.myHabitStreaks.map((s) => s.currentStreak),
+      ...stats.partnerHabitStreaks.map((s) => s.currentStreak),
+      0
+    );
+  }, [stats]);
+
+  const hasPerfectPairDay = useMemo(() => {
+    if (!stats) return false;
+    return stats.pairDayResults.some((d) => d.bothComplete);
+  }, [stats]);
+
   if (isLoading) {
     return (
       <ScreenContainer>
@@ -76,8 +91,8 @@ export default function StatsScreen() {
       <DualRingHero
         myName={myName}
         partnerName={partnerName}
-        myCompletedCount={stats.myTodayCompletedCount}
-        partnerCompletedCount={stats.partnerTodayCompletedCount}
+        myCompletedHabits={stats.myTodayCompletedHabits}
+        partnerCompletedHabits={stats.partnerTodayCompletedHabits}
         totalHabits={HABIT_ORDER.length}
         dayNumber={stats.dayNumber}
         chunkNumber={stats.chunkNumber}
@@ -87,6 +102,17 @@ export default function StatsScreen() {
         <PairStreakBanner
           currentStreak={stats.pairStreak}
           longestStreak={stats.longestPairStreak}
+        />
+      </View>
+
+      <View style={styles.section}>
+        <BadgeShelf
+          earnedBadges={stats.earnedBadges}
+          dayNumber={stats.dayNumber}
+          bestHabitStreak={bestHabitStreak}
+          pairStreak={stats.pairStreak}
+          longestPairStreak={stats.longestPairStreak}
+          hasPerfectPairDay={hasPerfectPairDay}
         />
       </View>
 
@@ -103,20 +129,11 @@ export default function StatsScreen() {
       </View>
 
       <Text style={styles.sectionTitle}>Habit Breakdown</Text>
-      <View style={styles.habitList}>
-        {stats.habitComparisons.map((comparison) => (
-          <HabitComparisonCard
-            key={comparison.habitId}
-            comparison={comparison}
-            myName={myName}
-            partnerName={partnerName}
-          />
-        ))}
-      </View>
-
-      <View style={styles.section}>
-        <BadgeShelf earnedBadges={stats.earnedBadges} />
-      </View>
+      <HabitBreakdownTable
+        comparisons={stats.habitComparisons}
+        myName={myName}
+        partnerName={partnerName}
+      />
 
       {selectedDate && selectedDayData && (
         <DayDetailSheet
@@ -163,8 +180,5 @@ const styles = StyleSheet.create({
     color: colors.textPrimary,
     marginTop: spacing.xl,
     marginBottom: spacing.md,
-  },
-  habitList: {
-    gap: spacing.md,
   },
 });

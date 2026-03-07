@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { View, Text, StyleSheet, Pressable, AppState } from 'react-native';
+import { View, Text, StyleSheet, AppState } from 'react-native';
+import { Pressable } from 'react-native-gesture-handler';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -40,7 +41,6 @@ export function TimedHabitCard({ definition, data, onToggle }: TimedHabitCardPro
   const startedAtRef = useRef<number | null>(null);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
   const notifIdRef = useRef<string | null>(null);
-  const longPressTriggered = useRef(false);
   const cardScale = useSharedValue(1);
   const fillProgress = useSharedValue(0);
 
@@ -127,9 +127,9 @@ export function TimedHabitCard({ definition, data, onToggle }: TimedHabitCardPro
     }
   }, [completed, running, duration, tick, definition.label]);
 
+  // RNGH Pressable: onPress does NOT fire after onLongPress, so no guard needed
   const handleLongPress = useCallback(() => {
     if (completed) return;
-    longPressTriggered.current = true;
 
     // Clean up timer if it was running
     if (intervalRef.current) {
@@ -150,7 +150,6 @@ export function TimedHabitCard({ definition, data, onToggle }: TimedHabitCardPro
   }, [completed, onToggle]);
 
   const handlePressIn = useCallback(() => {
-    longPressTriggered.current = false;
     if (completed) {
       cardScale.value = withSpring(0.97);
       return;
@@ -160,17 +159,13 @@ export function TimedHabitCard({ definition, data, onToggle }: TimedHabitCardPro
   }, [completed]);
 
   const handlePressOut = useCallback(() => {
-    if (!completed && !longPressTriggered.current) {
+    if (!completed) {
       fillProgress.value = withTiming(0, { duration: 150 });
     }
     cardScale.value = withSpring(1);
   }, [completed]);
 
-  const handleTap = useCallback(() => {
-    if (longPressTriggered.current) {
-      longPressTriggered.current = false;
-      return;
-    }
+  const handlePress = useCallback(() => {
     if (completed) {
       // Undo
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -194,7 +189,7 @@ export function TimedHabitCard({ definition, data, onToggle }: TimedHabitCardPro
 
   return (
     <Pressable
-      onPress={handleTap}
+      onPress={handlePress}
       onPressIn={handlePressIn}
       onPressOut={handlePressOut}
       onLongPress={handleLongPress}

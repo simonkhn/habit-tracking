@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useRef, useMemo } from 'react';
 import {
   View,
   Text,
@@ -6,18 +6,19 @@ import {
   TextInput,
   TouchableOpacity,
   StyleSheet,
-  Platform,
-  Keyboard,
   ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { Ionicons } from '@expo/vector-icons';
 import { useChat } from '../../src/hooks/useChat';
 import { ChatBubble } from '../../src/components/chat/ChatBubble';
-import { ChatTag } from '../../src/types/chat';
+import { ChatMessage, ChatTag } from '../../src/types/chat';
 import { colors, typography, fontWeights, spacing, borderRadius } from '../../src/theme';
+
+const ACCENT_BLUE = '#3B82F6';
+const TWO_MINUTES = 2 * 60 * 1000;
+const FIVE_MINUTES = 5 * 60 * 1000;
 
 const FILTERS: { label: string; value: ChatTag | null }[] = [
   { label: 'All', value: null },
@@ -25,26 +26,112 @@ const FILTERS: { label: string; value: ChatTag | null }[] = [
   { label: 'Bugs', value: 'bug' },
 ];
 
+// --- List item types ---
+
+type ChatListItem =
+  | {
+      type: 'message';
+      data: ChatMessage;
+      isFirstInGroup: boolean;
+      isLastInGroup: boolean;
+      showTimestamp: boolean;
+    }
+  | { type: 'dateSeparator'; date: string };
+
+// --- Helpers ---
+
+function getMessageTime(msg: ChatMessage): number {
+  return msg.timestamp?.toDate?.() ? msg.timestamp.toDate().getTime() : 0;
+}
+
+function formatDateSeparator(dateStr: string): string {
+  const today = new Date();
+  const yesterday = new Date();
+  yesterday.setDate(today.getDate() - 1);
+
+  const toDateKey = (d: Date) =>
+    `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+
+  if (dateStr === toDateKey(today)) return 'Today';
+  if (dateStr === toDateKey(yesterday)) return 'Yesterday';
+
+  const [year, month, day] = dateStr.split('-').map(Number);
+  const date = new Date(year, month - 1, day);
+  return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+}
+
+function getDateKey(msg: ChatMessage): string {
+  const d = msg.timestamp?.toDate?.();
+  if (!d) return '';
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+/**
+ * Build the list items with grouping info and date separators.
+ *
+ * `messages` is sorted newest-first (index 0 = newest, displayed at bottom due to inverted FlatList).
+ *
+ * In display order (bottom to top):
+ *   messages[0] is at the bottom, messages[N-1] is at the top.
+ *
+ * For message at index i:
+ *   - Display-above (older) = messages[i+1]
+ *   - Display-below (newer) = messages[i-1]
+ */
+function buildListItems(messages: ChatMessage[]): ChatListItem[] {
+  if (messages.length === 0) return [];
+
+  const items: ChatListItem[] = [];
+
+  for (let i = 0; i < messages.length; i++) {
+    const msg = messages[i];
+    const msgTime = getMessageTime(msg);
+
+    // Message above in display (older) = messages[i+1]
+    const olderMsg = i + 1 < messages.length ? messages[i + 1] : null;
+    // Message below in display (newer) = messages[i-1]
+    const newerMsg = i - 1 >= 0 ? messages[i - 1] : null;
+
+    const olderTime = olderMsg ? getMessageTime(olderMsg) : 0;
+    const newerTime = newerMsg ? getMessageTime(newerMsg) : 0;
+
+    const isFirstInGroup =
+      !olderMsg ||
+      olderMsg.userId !== msg.userId ||
+      Math.abs(msgTime - olderTime) > TWO_MINUTES;
+
+    const isLastInGroup =
+      !newerMsg ||
+      newerMsg.userId !== msg.userId ||
+      Math.abs(newerTime - msgTime) > TWO_MINUTES;
+
+    const showTimestamp =
+      isLastInGroup || !newerMsg || Math.abs(newerTime - msgTime) > FIVE_MINUTES;
+
+    items.push({
+      type: 'message',
+      data: msg,
+      isFirstInGroup,
+      isLastInGroup,
+      showTimestamp,
+    });
+
+    // Insert date separator AFTER this message in the array (which means ABOVE it visually
+    // since FlatList is inverted) when this message and the older message are on different days,
+    // or when this is the oldest message.
+    const currentDateKey = getDateKey(msg);
+    const olderDateKey = olderMsg ? getDateKey(olderMsg) : null;
+
+    if (currentDateKey && (!olderMsg || currentDateKey !== olderDateKey)) {
+      items.push({ type: 'dateSeparator', date: currentDateKey });
+    }
+  }
+
+  return items;
+}
+
 export default function ChatScreen() {
-  const tabBarHeight = useBottomTabBarHeight();
-  const [keyboardPadding, setKeyboardPadding] = useState(0);
-
-  useEffect(() => {
-    const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
-    const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
-
-    const showSub = Keyboard.addListener(showEvent, (e) => {
-      setKeyboardPadding(e.endCoordinates.height - tabBarHeight);
-    });
-    const hideSub = Keyboard.addListener(hideEvent, () => {
-      setKeyboardPadding(0);
-    });
-
-    return () => {
-      showSub.remove();
-      hideSub.remove();
-    };
-  }, [tabBarHeight]);
+  const flatListRef = useRef<FlatList>(null);
 
   const {
     messages,
@@ -72,6 +159,42 @@ export default function ChatScreen() {
 
   const getSenderName = (userId: string) =>
     userId === currentUserId ? myName : partnerName;
+
+  // Build grouped list items with date separators
+  const listItems = useMemo(() => buildListItems(messages), [messages]);
+
+  const getItemKey = (item: ChatListItem) =>
+    item.type === 'message' ? item.data.id : `sep-${item.date}`;
+
+  const renderItem = ({ item }: { item: ChatListItem }) => {
+    if (item.type === 'dateSeparator') {
+      return (
+        <View style={styles.dateSeparator}>
+          <View style={styles.dateSeparatorLine} />
+          <Text style={styles.dateSeparatorText}>
+            {formatDateSeparator(item.date)}
+          </Text>
+          <View style={styles.dateSeparatorLine} />
+        </View>
+      );
+    }
+
+    return (
+      <ChatBubble
+        message={item.data}
+        isMe={item.data.userId === currentUserId}
+        senderName={getSenderName(item.data.userId)}
+        reactions={reactions[item.data.id] || null}
+        currentUserId={currentUserId}
+        onReply={setReplyTo}
+        onDelete={deleteMessage}
+        onReact={toggleReaction}
+        isFirstInGroup={item.isFirstInGroup}
+        isLastInGroup={item.isLastInGroup}
+        showTimestamp={item.showTimestamp}
+      />
+    );
+  };
 
   return (
     <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
@@ -101,23 +224,13 @@ export default function ChatScreen() {
           <ActivityIndicator size="large" color={colors.textPrimary} />
         </View>
       ) : (
-        <View style={[styles.flex, { paddingBottom: keyboardPadding }]}>
+        <View style={styles.flex}>
           <GestureHandlerRootView style={styles.flex}>
             <FlatList
-              data={messages}
-              keyExtractor={(item) => item.id}
-              renderItem={({ item }) => (
-                <ChatBubble
-                  message={item}
-                  isMe={item.userId === currentUserId}
-                  senderName={getSenderName(item.userId)}
-                  reactions={reactions[item.id] || null}
-                  currentUserId={currentUserId}
-                  onReply={setReplyTo}
-                  onDelete={deleteMessage}
-                  onReact={toggleReaction}
-                />
-              )}
+              ref={flatListRef}
+              data={listItems}
+              keyExtractor={getItemKey}
+              renderItem={renderItem}
               inverted
               contentContainerStyle={styles.listContent}
               showsVerticalScrollIndicator={false}
@@ -217,8 +330,8 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
   },
   filterPillActive: {
-    backgroundColor: colors.textPrimary,
-    borderColor: colors.textPrimary,
+    backgroundColor: ACCENT_BLUE,
+    borderColor: ACCENT_BLUE,
   },
   filterText: {
     ...typography.xs,
@@ -246,6 +359,27 @@ const styles = StyleSheet.create({
     color: colors.textTertiary,
     textAlign: 'center',
   },
+
+  // Date separators
+  dateSeparator: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 24,
+    paddingVertical: spacing.md,
+  },
+  dateSeparatorLine: {
+    flex: 1,
+    height: StyleSheet.hairlineWidth,
+    backgroundColor: colors.border,
+  },
+  dateSeparatorText: {
+    ...typography.xs,
+    fontWeight: fontWeights.medium,
+    color: colors.textTertiary,
+    paddingHorizontal: spacing.md,
+  },
+
+  // Reply bar
   replyBar: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -258,7 +392,7 @@ const styles = StyleSheet.create({
   replyAccent: {
     width: 4,
     alignSelf: 'stretch',
-    backgroundColor: colors.textPrimary,
+    backgroundColor: ACCENT_BLUE,
     borderRadius: 2,
     marginRight: spacing.sm,
   },
@@ -269,13 +403,15 @@ const styles = StyleSheet.create({
   replyLabel: {
     ...typography.xs,
     fontWeight: fontWeights.semibold,
-    color: colors.textPrimary,
+    color: ACCENT_BLUE,
   },
   replyText: {
     ...typography.xs,
     color: colors.textTertiary,
     marginTop: 1,
   },
+
+  // Input bar
   inputBar: {
     flexDirection: 'row',
     alignItems: 'flex-end',
@@ -291,7 +427,7 @@ const styles = StyleSheet.create({
     ...typography.sm,
     color: colors.textPrimary,
     backgroundColor: colors.background,
-    borderRadius: borderRadius.md,
+    borderRadius: 20,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
     maxHeight: 100,
@@ -300,7 +436,7 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: colors.textPrimary,
+    backgroundColor: ACCENT_BLUE,
     alignItems: 'center',
     justifyContent: 'center',
   },

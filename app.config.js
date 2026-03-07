@@ -19,6 +19,7 @@ export default {
         backgroundColor: "#FAFAFA",
       },
       edgeToEdgeEnabled: true,
+      softwareKeyboardLayoutMode: "resize",
       package: "com.simonkahan.habittracking",
       googleServicesFile:
         process.env.GOOGLE_SERVICES_JSON || "./google-services.json",

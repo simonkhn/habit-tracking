@@ -7,8 +7,13 @@ import { getHabitDefinition } from '../../config/habits';
 import { HabitIcon } from '../habits/HabitIcon';
 import { HabitId } from '../../types/habit';
 
-interface HabitComparisonCardProps {
+interface HabitComparisonRowProps {
   comparison: HabitComparison;
+  isLast: boolean;
+}
+
+interface HabitBreakdownTableProps {
+  comparisons: HabitComparison[];
   myName: string;
   partnerName: string;
 }
@@ -27,145 +32,205 @@ function getTrendIcon(trend: 'up' | 'down' | 'flat'): {
   }
 }
 
-export function HabitComparisonCard({ comparison, myName, partnerName }: HabitComparisonCardProps) {
+export function HabitComparisonRow({ comparison, isLast }: HabitComparisonRowProps) {
   const def = getHabitDefinition(comparison.habitId as HabitId);
   const trend = getTrendIcon(comparison.myTrend);
 
   return (
-    <View style={styles.card}>
-      {/* Header row */}
-      <View style={styles.header}>
-        <View style={[styles.iconContainer, { backgroundColor: `${def.color}1A` }]}>
-          <HabitIcon name={def.icon} size={18} color={def.color} />
+    <View
+      style={[
+        styles.row,
+        { borderLeftColor: def.color },
+        !isLast && styles.rowBorder,
+      ]}
+    >
+      {/* Left: Icon + Name */}
+      <View style={styles.habitInfo}>
+        <View style={[styles.iconCircle, { backgroundColor: `${def.color}1A` }]}>
+          <HabitIcon name={def.icon} size={14} color={def.color} />
         </View>
-        <Text style={[styles.label, { color: def.color }]}>{def.label}</Text>
-        <View style={styles.spacer} />
-        <Ionicons name={trend.name} size={16} color={trend.color} />
+        <Text style={[styles.habitName, { color: def.color }]} numberOfLines={1}>
+          {def.label}
+        </Text>
       </View>
 
-      {/* Two-column comparison */}
-      <View style={styles.columns}>
-        {/* My stats */}
-        <View style={styles.column}>
-          <Text style={styles.name}>{myName}</Text>
-          <View style={styles.streakRow}>
-            <Text style={styles.streakNumber}>{comparison.myStreak.current}</Text>
-            <Text style={styles.streakUnit}> days</Text>
-          </View>
-          <Text style={styles.best}>best {comparison.myStreak.longest}</Text>
-          <View style={styles.dotsRow}>
-            {comparison.myLast7Days.map((completed, i) => (
-              <View
-                key={i}
-                style={[
-                  styles.dot,
-                  { backgroundColor: completed ? def.color : colors.border },
-                ]}
-              />
-            ))}
-          </View>
-        </View>
+      {/* Center-left: My streak */}
+      <View style={styles.streakCell}>
+        <Text style={styles.streakNumber}>{comparison.myStreak.current}</Text>
+        <Text style={styles.bestLabel}>best {comparison.myStreak.longest}</Text>
+      </View>
 
-        {/* Divider */}
-        <View style={styles.divider} />
+      {/* Center-right: Partner streak */}
+      <View style={styles.streakCell}>
+        <Text style={styles.streakNumber}>{comparison.partnerStreak.current}</Text>
+        <Text style={styles.bestLabel}>best {comparison.partnerStreak.longest}</Text>
+      </View>
 
-        {/* Partner stats */}
-        <View style={[styles.column, styles.partnerColumn]}>
-          <Text style={styles.name}>{partnerName}</Text>
-          <View style={styles.streakRow}>
-            <Text style={styles.streakNumber}>{comparison.partnerStreak.current}</Text>
-            <Text style={styles.streakUnit}> days</Text>
-          </View>
-          <Text style={styles.best}>best {comparison.partnerStreak.longest}</Text>
-          <View style={styles.dotsRow}>
-            {comparison.partnerLast7Days.map((completed, i) => (
-              <View
-                key={i}
-                style={[
-                  styles.dot,
-                  { backgroundColor: completed ? def.color : colors.border },
-                ]}
-              />
-            ))}
-          </View>
+      {/* Right: 7-day dot grid (2 rows) */}
+      <View style={styles.dotsGrid}>
+        <View style={styles.dotsRow}>
+          {comparison.myLast7Days.map((completed, i) => (
+            <View
+              key={`my-${i}`}
+              style={[
+                styles.dot,
+                { backgroundColor: completed ? def.color : colors.border },
+              ]}
+            />
+          ))}
         </View>
+        <View style={styles.dotsRow}>
+          {comparison.partnerLast7Days.map((completed, i) => (
+            <View
+              key={`p-${i}`}
+              style={[
+                styles.dot,
+                { backgroundColor: completed ? def.color : colors.border },
+              ]}
+            />
+          ))}
+        </View>
+      </View>
+
+      {/* Far right: Trend */}
+      <View style={styles.trendCell}>
+        <Ionicons name={trend.name} size={14} color={trend.color} />
       </View>
     </View>
   );
 }
 
+export function HabitBreakdownTable({ comparisons, myName, partnerName }: HabitBreakdownTableProps) {
+  return (
+    <View style={styles.tableCard}>
+      {/* Column headers */}
+      <View style={styles.headerRow}>
+        <View style={styles.habitInfo}>
+          <Text style={styles.headerText}>{' '}</Text>
+        </View>
+        <View style={styles.streakCell}>
+          <Text style={styles.headerText} numberOfLines={1}>{myName}</Text>
+        </View>
+        <View style={styles.streakCell}>
+          <Text style={styles.headerText} numberOfLines={1}>{partnerName}</Text>
+        </View>
+        <View style={styles.dotsGrid}>
+          <Text style={styles.headerText}>7 days</Text>
+        </View>
+        <View style={styles.trendCell}>
+          <Text style={styles.headerText}>{' '}</Text>
+        </View>
+      </View>
+
+      {/* Rows */}
+      {comparisons.map((comparison, index) => (
+        <HabitComparisonRow
+          key={comparison.habitId}
+          comparison={comparison}
+          isLast={index === comparisons.length - 1}
+        />
+      ))}
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
-  card: {
+  // --- Table card ---
+  tableCard: {
     backgroundColor: colors.surface,
     borderRadius: borderRadius.md,
-    padding: spacing.lg,
     borderWidth: 1,
     borderColor: colors.border,
+    overflow: 'hidden',
   },
-  header: {
+  headerRow: {
     flexDirection: 'row',
     alignItems: 'center',
+    paddingVertical: spacing.sm,
+    paddingRight: spacing.md,
+    paddingLeft: spacing.md + 3, // account for left accent bar in rows
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
   },
-  iconContainer: {
-    width: 32,
-    height: 32,
-    borderRadius: borderRadius.sm,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  label: {
-    ...typography.base,
-    fontWeight: fontWeights.semibold,
-    marginLeft: spacing.sm,
-  },
-  spacer: {
-    flex: 1,
-  },
-  columns: {
-    flexDirection: 'row',
-    marginTop: spacing.md,
-  },
-  column: {
-    flex: 1,
-  },
-  partnerColumn: {
-    paddingLeft: spacing.md,
-  },
-  divider: {
-    width: 1,
-    backgroundColor: colors.border,
-  },
-  name: {
+  headerText: {
     ...typography.xs,
     fontWeight: fontWeights.medium,
     color: colors.textTertiary,
-    marginBottom: spacing.xs,
   },
-  streakRow: {
+
+  // --- Row ---
+  row: {
     flexDirection: 'row',
-    alignItems: 'baseline',
+    alignItems: 'center',
+    height: 52,
+    paddingRight: spacing.md,
+    paddingLeft: spacing.md,
+    borderLeftWidth: 3,
+  },
+  rowBorder: {
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
+
+  // --- Habit info (left) ---
+  habitInfo: {
+    flex: 2.5,
+    flexDirection: 'row',
+    alignItems: 'center',
+    minWidth: 0,
+  },
+  iconCircle: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  habitName: {
+    ...typography.sm,
+    fontWeight: fontWeights.semibold,
+    marginLeft: spacing.sm,
+    flexShrink: 1,
+  },
+
+  // --- Streak cells ---
+  streakCell: {
+    flex: 1.2,
+    alignItems: 'center',
   },
   streakNumber: {
-    ...typography.lg,
+    ...typography.base,
     fontWeight: fontWeights.bold,
     color: colors.textPrimary,
+    lineHeight: 18,
   },
-  streakUnit: {
+  bestLabel: {
     ...typography.xs,
     color: colors.textTertiary,
+    lineHeight: 14,
   },
-  best: {
-    ...typography.xs,
-    color: colors.textTertiary,
+
+  // --- Dots grid ---
+  dotsGrid: {
+    flex: 1.8,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 2,
   },
   dotsRow: {
     flexDirection: 'row',
-    marginTop: spacing.sm,
-    gap: spacing.xs,
+    gap: 2,
   },
   dot: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+  },
+
+  // --- Trend ---
+  trendCell: {
+    width: 20,
+    alignItems: 'center',
+    marginLeft: spacing.xs,
   },
 });
