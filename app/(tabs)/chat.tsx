@@ -6,12 +6,10 @@ import {
   TextInput,
   TouchableOpacity,
   StyleSheet,
-  Platform,
   ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
-import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { Ionicons } from '@expo/vector-icons';
 import { useChat } from '../../src/hooks/useChat';
@@ -135,7 +133,6 @@ function buildListItems(messages: ChatMessage[]): ChatListItem[] {
 
 export default function ChatScreen() {
   const flatListRef = useRef<FlatList>(null);
-  const tabBarHeight = useBottomTabBarHeight();
 
   const {
     messages,
@@ -231,7 +228,6 @@ export default function ChatScreen() {
         <KeyboardAvoidingView
           style={styles.flex}
           behavior="padding"
-          keyboardVerticalOffset={tabBarHeight}
         >
           <GestureHandlerRootView style={styles.flex}>
             <FlatList
