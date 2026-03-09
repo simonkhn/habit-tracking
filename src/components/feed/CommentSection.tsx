@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { FeedComment } from '../../types/habit';
-import { colors, typography, fontWeights, spacing, borderRadius } from '../../theme';
+import { useTheme, typography, fontWeights, spacing, borderRadius } from '../../theme';
 
 interface CommentSectionProps {
   comments: FeedComment[];
@@ -19,6 +19,7 @@ export function CommentSection({
   partnerName,
   onSubmit,
 }: CommentSectionProps) {
+  const { colors } = useTheme();
   const [isExpanded, setIsExpanded] = useState(false);
   const [text, setText] = useState('');
 
@@ -43,7 +44,7 @@ export function CommentSection({
           size={14}
           color={colors.textTertiary}
         />
-        <Text style={styles.toggleText}>
+        <Text style={[styles.toggleText, { color: colors.textTertiary }]}>
           {comments.length > 0
             ? `${comments.length} comment${comments.length !== 1 ? 's' : ''}`
             : 'Add a comment'}
@@ -58,17 +59,17 @@ export function CommentSection({
       {isExpanded && (
         <View style={styles.expanded}>
           {comments.map((comment, i) => (
-            <View key={i} style={styles.comment}>
-              <Text style={styles.commentAuthor}>
+            <View key={i} style={[styles.comment, { borderLeftColor: colors.border }]}>
+              <Text style={[styles.commentAuthor, { color: colors.textSecondary }]}>
                 {getDisplayName(comment.userId)}
               </Text>
-              <Text style={styles.commentText}>{comment.text}</Text>
+              <Text style={[styles.commentText, { color: colors.textPrimary }]}>{comment.text}</Text>
             </View>
           ))}
 
           <View style={styles.inputRow}>
             <TextInput
-              style={styles.input}
+              style={[styles.input, { color: colors.textPrimary, backgroundColor: colors.background }]}
               placeholder="Say something nice..."
               placeholderTextColor={colors.textTertiary}
               value={text}
@@ -78,7 +79,7 @@ export function CommentSection({
               maxLength={200}
             />
             <TouchableOpacity
-              style={[styles.sendButton, !text.trim() && styles.sendButtonDisabled]}
+              style={[styles.sendButton, { backgroundColor: colors.background }, !text.trim() && styles.sendButtonDisabled]}
               onPress={handleSubmit}
               disabled={!text.trim()}
               activeOpacity={0.7}
@@ -108,7 +109,6 @@ const styles = StyleSheet.create({
   },
   toggleText: {
     ...typography.xs,
-    color: colors.textTertiary,
     flex: 1,
   },
   expanded: {
@@ -118,16 +118,13 @@ const styles = StyleSheet.create({
     marginBottom: spacing.sm,
     paddingLeft: spacing.sm,
     borderLeftWidth: 2,
-    borderLeftColor: colors.border,
   },
   commentAuthor: {
     ...typography.xs,
     fontWeight: fontWeights.semibold,
-    color: colors.textSecondary,
   },
   commentText: {
     ...typography.sm,
-    color: colors.textPrimary,
     marginTop: 2,
   },
   inputRow: {
@@ -139,8 +136,6 @@ const styles = StyleSheet.create({
   input: {
     flex: 1,
     ...typography.sm,
-    color: colors.textPrimary,
-    backgroundColor: colors.background,
     borderRadius: borderRadius.sm,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
@@ -148,7 +143,6 @@ const styles = StyleSheet.create({
   sendButton: {
     padding: spacing.sm,
     borderRadius: borderRadius.sm,
-    backgroundColor: colors.background,
   },
   sendButtonDisabled: {
     opacity: 0.5,

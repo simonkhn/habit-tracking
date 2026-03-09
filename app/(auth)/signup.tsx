@@ -3,10 +3,11 @@ import { View, Text, TextInput, StyleSheet, KeyboardAvoidingView, Platform } fro
 import { useRouter } from 'expo-router';
 import { signUp } from '../../src/services/auth';
 import { Button } from '../../src/components/ui/Button';
-import { colors, typography, fontWeights, spacing, borderRadius } from '../../src/theme';
+import { useTheme, typography, fontWeights, spacing, borderRadius } from '../../src/theme';
 
 export default function SignupScreen() {
   const router = useRouter();
+  const { colors } = useTheme();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [name, setName] = useState<'Simon' | 'Bina' | ''>('');
@@ -33,12 +34,12 @@ export default function SignupScreen() {
 
   return (
     <KeyboardAvoidingView
-      style={styles.container}
+      style={[styles.container, { backgroundColor: colors.background }]}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
       <View style={styles.content}>
-        <Text style={styles.title}>Join the Challenge</Text>
-        <Text style={styles.subtitle}>Create your account</Text>
+        <Text style={[styles.title, { color: colors.textPrimary }]}>Join the Challenge</Text>
+        <Text style={[styles.subtitle, { color: colors.textSecondary }]}>Create your account</Text>
 
         <View style={styles.nameButtons}>
           <Button
@@ -56,7 +57,7 @@ export default function SignupScreen() {
         </View>
 
         <TextInput
-          style={styles.input}
+          style={[styles.input, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.textPrimary }]}
           placeholder="Email"
           placeholderTextColor={colors.textTertiary}
           value={email}
@@ -66,7 +67,7 @@ export default function SignupScreen() {
         />
 
         <TextInput
-          style={styles.input}
+          style={[styles.input, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.textPrimary }]}
           placeholder="Password"
           placeholderTextColor={colors.textTertiary}
           value={password}
@@ -74,7 +75,7 @@ export default function SignupScreen() {
           secureTextEntry
         />
 
-        {error ? <Text style={styles.error}>{error}</Text> : null}
+        {error ? <Text style={[styles.error, { color: colors.error }]}>{error}</Text> : null}
 
         <Button
           title="Create Account"
@@ -98,7 +99,6 @@ export default function SignupScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.background,
   },
   content: {
     flex: 1,
@@ -108,12 +108,10 @@ const styles = StyleSheet.create({
   title: {
     ...typography.xxl,
     fontWeight: fontWeights.bold,
-    color: colors.textPrimary,
     textAlign: 'center',
   },
   subtitle: {
     ...typography.md,
-    color: colors.textSecondary,
     textAlign: 'center',
     marginTop: spacing.sm,
     marginBottom: spacing.xxxl,
@@ -127,18 +125,14 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   input: {
-    backgroundColor: colors.surface,
     borderRadius: borderRadius.sm,
     borderWidth: 1,
-    borderColor: colors.border,
     padding: spacing.lg,
     ...typography.base,
-    color: colors.textPrimary,
     marginBottom: spacing.md,
   },
   error: {
     ...typography.sm,
-    color: colors.error,
     textAlign: 'center',
     marginBottom: spacing.md,
   },

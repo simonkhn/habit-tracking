@@ -10,7 +10,7 @@ import Animated, {
 import * as Haptics from 'expo-haptics';
 import { HabitDefinition, HabitData } from '../../types/habit';
 import { HabitIcon } from './HabitIcon';
-import { colors, typography, fontWeights, spacing, borderRadius } from '../../theme';
+import { useTheme, typography, fontWeights, spacing, borderRadius } from '../../theme';
 
 interface BinaryHabitCardProps {
   definition: HabitDefinition;
@@ -21,6 +21,7 @@ interface BinaryHabitCardProps {
 const HOLD_DURATION = 500;
 
 export function BinaryHabitCard({ definition, data, onToggle }: BinaryHabitCardProps) {
+  const { colors } = useTheme();
   const completed = data?.completed ?? false;
   const fillProgress = useSharedValue(0);
   const cardScale = useSharedValue(1);
@@ -91,6 +92,7 @@ export function BinaryHabitCard({ definition, data, onToggle }: BinaryHabitCardP
       <Animated.View
         style={[
           styles.card,
+          { backgroundColor: colors.surface, borderColor: colors.border },
           completed && styles.cardCompleted,
           cardAnimStyle,
         ]}
@@ -113,23 +115,24 @@ export function BinaryHabitCard({ definition, data, onToggle }: BinaryHabitCardP
             <Text
               style={[
                 styles.label,
-                completed && styles.labelCompleted,
+                { color: colors.textPrimary },
+                completed && [styles.labelCompleted, { color: colors.textTertiary }],
               ]}
             >
               {definition.label}
             </Text>
-            <Text style={styles.description}>{definition.description}</Text>
+            <Text style={[styles.description, { color: colors.textTertiary }]}>{definition.description}</Text>
           </View>
           {completed && (
             <>
-              <Text style={styles.undoLabel}>Undo</Text>
+              <Text style={[styles.undoLabel, { color: colors.textTertiary }]}>Undo</Text>
               <View
                 style={[
                   styles.checkmark,
                   { backgroundColor: definition.color },
                 ]}
               >
-                <HabitIcon name="checkmark" size={16} color="#fff" />
+                <HabitIcon name="checkmark" size={16} color={colors.textOnPrimary} />
               </View>
             </>
           )}
@@ -141,11 +144,9 @@ export function BinaryHabitCard({ definition, data, onToggle }: BinaryHabitCardP
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: colors.surface,
     borderRadius: borderRadius.md,
     padding: spacing.lg,
     borderWidth: 1,
-    borderColor: colors.border,
     overflow: 'hidden',
     position: 'relative',
   },
@@ -177,20 +178,16 @@ const styles = StyleSheet.create({
   label: {
     ...typography.base,
     fontWeight: fontWeights.semibold,
-    color: colors.textPrimary,
   },
   labelCompleted: {
     textDecorationLine: 'line-through',
-    color: colors.textTertiary,
   },
   description: {
     ...typography.sm,
-    color: colors.textTertiary,
     marginTop: 2,
   },
   undoLabel: {
     ...typography.xs,
-    color: colors.textTertiary,
     marginRight: spacing.xs,
   },
   checkmark: {

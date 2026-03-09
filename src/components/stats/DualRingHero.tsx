@@ -1,7 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { View, Text, StyleSheet, Pressable } from 'react-native';
 import Svg, { Circle } from 'react-native-svg';
-import { colors, typography, fontWeights, spacing, borderRadius } from '../../theme';
+import { useTheme, typography, fontWeights, spacing, borderRadius } from '../../theme';
+import { HABIT_ORDER, getHabitDefinition } from '../../config/habits';
 
 export interface CompletedHabitInfo {
   habitIndex: number; // index in HABIT_ORDER (for color lookup)
@@ -17,16 +18,6 @@ interface DualRingHeroProps {
   dayNumber: number;
   chunkNumber: number;
 }
-
-const HABIT_COLORS = [
-  '#E67E22', // wakeUpOnTime
-  '#F5A623', // morningSunlight
-  '#3498DB', // water
-  '#9B59B6', // journal
-  '#27AE60', // reading
-  '#E74C3C', // workout
-  '#00BCD4', // meditate
-];
 
 const HABIT_LABELS = ['Wake Up', 'Sunlight', 'Water', 'Journal', 'Read', 'Workout', 'Meditate'];
 
@@ -46,6 +37,13 @@ function CompletionRing({
   total: number;
   onSegmentPress?: (habitIndex: number | null) => void;
 }) {
+  const { colors } = useTheme();
+
+  const habitColors = useMemo(
+    () => HABIT_ORDER.map((id) => getHabitDefinition(id).color),
+    [],
+  );
+
   // Sort completed habits by completedAt timestamp
   const completed = habitInfos
     .filter(h => h.completedAt > 0)
@@ -62,7 +60,7 @@ function CompletionRing({
   const segments = Array.from({ length: total }, (_, i) => {
     if (i < completed.length) {
       return {
-        color: HABIT_COLORS[completed[i].habitIndex] || colors.textPrimary,
+        color: habitColors[completed[i].habitIndex] || colors.textPrimary,
         habitIndex: completed[i].habitIndex,
         isCompleted: true,
       };
@@ -138,8 +136,8 @@ function CompletionRing({
           );
         })}
       <View style={ringStyles.labelContainer}>
-        <Text style={ringStyles.count}>{completedCount}</Text>
-        <Text style={ringStyles.total}>/{total}</Text>
+        <Text style={[ringStyles.count, { color: colors.textPrimary }]}>{completedCount}</Text>
+        <Text style={[ringStyles.total, { color: colors.textTertiary }]}>/{total}</Text>
       </View>
     </View>
   );
@@ -169,11 +167,9 @@ const ringStyles = StyleSheet.create({
   count: {
     ...typography.xl,
     fontWeight: fontWeights.bold,
-    color: colors.textPrimary,
   },
   total: {
     ...typography.xs,
-    color: colors.textTertiary,
   },
 });
 
@@ -203,6 +199,7 @@ export function DualRingHero({
   dayNumber,
   chunkNumber,
 }: DualRingHeroProps) {
+  const { colors } = useTheme();
   const [selectedHabit, setSelectedHabit] = useState<number | null>(null);
 
   const myCount = myHabitInfos.filter(h => h.completedAt > 0).length;
@@ -229,14 +226,14 @@ export function DualRingHero({
   };
 
   return (
-    <View style={styles.card}>
-      <Text style={styles.dayLabel}>
+    <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+      <Text style={[styles.dayLabel, { color: colors.textSecondary }]}>
         Day {dayNumber} · Chunk {chunkNumber}
       </Text>
       {selectedHabit !== null && (
         <View style={styles.tooltipContainer}>
-          <View style={styles.tooltip}>
-            <Text style={styles.tooltipText}>
+          <View style={[styles.tooltip, { backgroundColor: colors.textPrimary }]}>
+            <Text style={[styles.tooltipText, { color: colors.textOnPrimary }]}>
               {HABIT_LABELS[selectedHabit] ?? 'Habit'}
             </Text>
           </View>
@@ -249,7 +246,7 @@ export function DualRingHero({
             total={totalHabits}
             onSegmentPress={handleSegmentPress}
           />
-          <Text style={styles.name}>{myName}</Text>
+          <Text style={[styles.name, { color: colors.textSecondary }]}>{myName}</Text>
         </View>
         <View style={styles.ringColumn}>
           <CompletionRing
@@ -257,25 +254,22 @@ export function DualRingHero({
             total={totalHabits}
             onSegmentPress={handleSegmentPress}
           />
-          <Text style={styles.name}>{partnerName}</Text>
+          <Text style={[styles.name, { color: colors.textSecondary }]}>{partnerName}</Text>
         </View>
       </View>
-      <Text style={styles.motivationalMessage}>{message}</Text>
+      <Text style={[styles.motivationalMessage, { color: colors.textSecondary }]}>{message}</Text>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: colors.surface,
     borderRadius: borderRadius.md,
     padding: spacing.lg,
     borderWidth: 1,
-    borderColor: colors.border,
   },
   dayLabel: {
     ...typography.base,
-    color: colors.textSecondary,
     textAlign: 'center',
     marginBottom: spacing.lg,
   },
@@ -289,12 +283,10 @@ const styles = StyleSheet.create({
   name: {
     ...typography.sm,
     fontWeight: fontWeights.semibold,
-    color: colors.textSecondary,
     marginTop: spacing.sm,
   },
   motivationalMessage: {
     ...typography.sm,
-    color: colors.textSecondary,
     textAlign: 'center',
     marginTop: spacing.lg,
     fontStyle: 'italic',
@@ -304,14 +296,12 @@ const styles = StyleSheet.create({
     marginBottom: spacing.sm,
   },
   tooltip: {
-    backgroundColor: colors.textPrimary,
     paddingHorizontal: spacing.sm,
     paddingVertical: spacing.xs,
     borderRadius: borderRadius.sm,
   },
   tooltipText: {
     ...typography.xs,
-    color: colors.background,
     fontWeight: fontWeights.semibold,
   },
 });

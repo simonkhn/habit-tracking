@@ -1,17 +1,19 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import { colors, typography, fontWeights, spacing } from '../../theme';
+import { useTheme, typography, fontWeights, spacing } from '../../theme';
 
 interface DayHeaderProps {
   label: string;
 }
 
 export function DayHeader({ label }: DayHeaderProps) {
+  const { colors } = useTheme();
+
   return (
     <View style={styles.container}>
-      <View style={styles.line} />
-      <Text style={styles.label}>{label}</Text>
-      <View style={styles.line} />
+      <View style={[styles.line, { backgroundColor: colors.border }]} />
+      <Text style={[styles.label, { color: colors.textSecondary }]}>{label}</Text>
+      <View style={[styles.line, { backgroundColor: colors.border }]} />
     </View>
   );
 }
@@ -26,12 +28,10 @@ const styles = StyleSheet.create({
   line: {
     flex: 1,
     height: 1,
-    backgroundColor: colors.border,
   },
   label: {
     ...typography.sm,
     fontWeight: fontWeights.semibold,
-    color: colors.textSecondary,
     paddingHorizontal: spacing.md,
   },
 });

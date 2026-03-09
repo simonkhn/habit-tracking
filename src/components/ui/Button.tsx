@@ -6,7 +6,7 @@ import {
   ActivityIndicator,
   ViewStyle,
 } from 'react-native';
-import { colors, typography, fontWeights, borderRadius, spacing } from '../../theme';
+import { useTheme, typography, fontWeights, borderRadius, spacing } from '../../theme';
 
 interface ButtonProps {
   title: string;
@@ -25,10 +25,16 @@ export function Button({
   disabled = false,
   style,
 }: ButtonProps) {
+  const { colors } = useTheme();
+
   const buttonStyles = [
     styles.base,
-    variant === 'primary' && styles.primary,
-    variant === 'secondary' && styles.secondary,
+    variant === 'primary' && { backgroundColor: colors.textPrimary },
+    variant === 'secondary' && {
+      backgroundColor: colors.background,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
     variant === 'ghost' && styles.ghost,
     disabled && styles.disabled,
     style,
@@ -36,9 +42,9 @@ export function Button({
 
   const textStyles = [
     styles.text,
-    variant === 'primary' && styles.primaryText,
-    variant === 'secondary' && styles.secondaryText,
-    variant === 'ghost' && styles.ghostText,
+    variant === 'primary' && { color: colors.textOnPrimary },
+    variant === 'secondary' && { color: colors.textPrimary },
+    variant === 'ghost' && { color: colors.textSecondary },
   ];
 
   return (
@@ -50,7 +56,7 @@ export function Button({
     >
       {loading ? (
         <ActivityIndicator
-          color={variant === 'primary' ? '#fff' : colors.textPrimary}
+          color={variant === 'primary' ? colors.textOnPrimary : colors.textPrimary}
         />
       ) : (
         <Text style={textStyles}>{title}</Text>
@@ -67,14 +73,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingHorizontal: spacing.xl,
   },
-  primary: {
-    backgroundColor: colors.textPrimary,
-  },
-  secondary: {
-    backgroundColor: colors.background,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
   ghost: {
     backgroundColor: 'transparent',
   },
@@ -84,14 +82,5 @@ const styles = StyleSheet.create({
   text: {
     ...typography.base,
     fontWeight: fontWeights.semibold,
-  },
-  primaryText: {
-    color: '#FFFFFF',
-  },
-  secondaryText: {
-    color: colors.textPrimary,
-  },
-  ghostText: {
-    color: colors.textSecondary,
   },
 });

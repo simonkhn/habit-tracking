@@ -3,7 +3,7 @@ import { View, Text, StyleSheet } from 'react-native';
 import { DayHabits } from '../../types/habit';
 import { HABIT_ORDER, getHabitDefinition } from '../../config/habits';
 import { Card } from '../ui/Card';
-import { colors, typography, fontWeights, spacing } from '../../theme';
+import { useTheme, typography, fontWeights, spacing } from '../../theme';
 
 interface PartnerSummaryCardProps {
   partnerName: string;
@@ -16,11 +16,13 @@ export function PartnerSummaryCard({
   habits,
   completedCount,
 }: PartnerSummaryCardProps) {
+  const { colors } = useTheme();
+
   return (
     <Card style={styles.card}>
       <View style={styles.header}>
-        <Text style={styles.name}>{partnerName}</Text>
-        <Text style={styles.count}>
+        <Text style={[styles.name, { color: colors.textPrimary }]}>{partnerName}</Text>
+        <Text style={[styles.count, { color: colors.textSecondary }]}>
           {completedCount} / {HABIT_ORDER.length}
         </Text>
       </View>
@@ -61,12 +63,10 @@ const styles = StyleSheet.create({
   name: {
     ...typography.base,
     fontWeight: fontWeights.semibold,
-    color: colors.textPrimary,
   },
   count: {
     ...typography.sm,
     fontWeight: fontWeights.medium,
-    color: colors.textSecondary,
   },
   dots: {
     flexDirection: 'row',

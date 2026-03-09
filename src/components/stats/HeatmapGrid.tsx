@@ -3,7 +3,7 @@ import { View, ScrollView, Text, StyleSheet } from 'react-native';
 import Svg, { Rect } from 'react-native-svg';
 import { DayStats } from '../../types/stats';
 import { HABIT_ORDER } from '../../config/habits';
-import { colors, typography, fontWeights, spacing } from '../../theme';
+import { useTheme, typography, fontWeights, spacing } from '../../theme';
 import { format, subDays, parseISO, getDay } from 'date-fns';
 
 interface HeatmapGridProps {
@@ -26,6 +26,7 @@ function getIntensity(completedCount: number, totalCount: number): number {
 }
 
 export function HeatmapGrid({ dailyStats, days = 90 }: HeatmapGridProps) {
+  const { colors } = useTheme();
   const statsMap = new Map(dailyStats.map((s) => [s.date, s]));
   const today = new Date();
   const cells: { date: string; intensity: number; col: number; row: number }[] = [];
@@ -52,8 +53,8 @@ export function HeatmapGrid({ dailyStats, days = 90 }: HeatmapGridProps) {
   const svgHeight = ROWS * (CELL_SIZE + CELL_GAP);
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Activity</Text>
+    <View style={[styles.container, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+      <Text style={[styles.title, { color: colors.textPrimary }]}>Activity</Text>
       <ScrollView horizontal showsHorizontalScrollIndicator={false}>
         <Svg width={svgWidth} height={svgHeight}>
           {cells.map(({ date, intensity, col, row }) => (
@@ -75,16 +76,13 @@ export function HeatmapGrid({ dailyStats, days = 90 }: HeatmapGridProps) {
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: colors.surface,
     borderRadius: 12,
     padding: spacing.lg,
     borderWidth: 1,
-    borderColor: colors.border,
   },
   title: {
     ...typography.base,
     fontWeight: fontWeights.semibold,
-    color: colors.textPrimary,
     marginBottom: spacing.md,
   },
 });

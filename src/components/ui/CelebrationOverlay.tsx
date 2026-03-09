@@ -9,7 +9,7 @@ import Animated, {
   withSpring,
   runOnJS,
 } from 'react-native-reanimated';
-import { colors, typography, fontWeights, spacing } from '../../theme';
+import { useTheme, typography, fontWeights, spacing } from '../../theme';
 
 interface CelebrationOverlayProps {
   visible: boolean;
@@ -17,6 +17,7 @@ interface CelebrationOverlayProps {
 }
 
 export function CelebrationOverlay({ visible, onDismiss }: CelebrationOverlayProps) {
+  const { colors } = useTheme();
   const opacity = useSharedValue(0);
   const scale = useSharedValue(0.5);
 
@@ -46,10 +47,12 @@ export function CelebrationOverlay({ visible, onDismiss }: CelebrationOverlayPro
 
   return (
     <Animated.View style={[styles.overlay, overlayStyle]}>
-      <Animated.View style={[styles.content, contentStyle]}>
+      <Animated.View style={[styles.content, { backgroundColor: colors.surface }, contentStyle]}>
         <Text style={styles.emoji}>🎉</Text>
-        <Text style={styles.title}>All done!</Text>
-        <Text style={styles.subtitle}>Every habit completed today</Text>
+        <Text style={[styles.title, { color: colors.textPrimary }]}>All done!</Text>
+        <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
+          Every habit completed today
+        </Text>
       </Animated.View>
     </Animated.View>
   );
@@ -64,7 +67,6 @@ const styles = StyleSheet.create({
     zIndex: 1000,
   },
   content: {
-    backgroundColor: colors.surface,
     borderRadius: 24,
     padding: 40,
     alignItems: 'center',
@@ -77,11 +79,9 @@ const styles = StyleSheet.create({
   title: {
     ...typography.xl,
     fontWeight: fontWeights.bold,
-    color: colors.textPrimary,
     marginBottom: spacing.sm,
   },
   subtitle: {
     ...typography.base,
-    color: colors.textSecondary,
   },
 });

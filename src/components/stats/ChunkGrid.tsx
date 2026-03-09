@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet, Pressable } from 'react-native';
-import { colors, typography, fontWeights, spacing, borderRadius } from '../../theme';
+import { useTheme, typography, fontWeights, spacing, borderRadius } from '../../theme';
 import { PairDayResult } from '../../types/stats';
 
 interface ChunkGridProps {
@@ -16,35 +16,6 @@ interface ChunkGridProps {
 const CELL_SIZE = 48;
 const GAP = spacing.sm;
 
-function getCellStyle(day: PairDayResult, isToday: boolean, isFuture: boolean) {
-  let backgroundColor: string;
-  let textColor: string;
-
-  if (isFuture) {
-    backgroundColor = colors.border;
-    textColor = colors.textTertiary;
-  } else if (day.bothComplete) {
-    backgroundColor = colors.success;
-    textColor = '#FFFFFF';
-  } else if (day.myComplete) {
-    backgroundColor = '#3498DB';
-    textColor = '#FFFFFF';
-  } else if (day.partnerComplete) {
-    backgroundColor = '#9B59B6';
-    textColor = '#FFFFFF';
-  } else {
-    backgroundColor = '#EBEDF0';
-    textColor = colors.textTertiary;
-  }
-
-  return {
-    backgroundColor,
-    textColor,
-    borderWidth: isToday ? 2 : 0,
-    borderColor: isToday ? colors.textPrimary : 'transparent',
-  };
-}
-
 export function ChunkGrid({
   pairDayResults,
   myName,
@@ -54,7 +25,37 @@ export function ChunkGrid({
   onDayPress,
   today,
 }: ChunkGridProps) {
+  const { colors } = useTheme();
   const todayStr = today;
+
+  function getCellStyle(day: PairDayResult, isToday: boolean, isFuture: boolean) {
+    let backgroundColor: string;
+    let textColor: string;
+
+    if (isFuture) {
+      backgroundColor = colors.border;
+      textColor = colors.textTertiary;
+    } else if (day.bothComplete) {
+      backgroundColor = colors.success;
+      textColor = '#FFFFFF';
+    } else if (day.myComplete) {
+      backgroundColor = colors.water;
+      textColor = '#FFFFFF';
+    } else if (day.partnerComplete) {
+      backgroundColor = colors.journal;
+      textColor = '#FFFFFF';
+    } else {
+      backgroundColor = colors.chunkMissed;
+      textColor = colors.textTertiary;
+    }
+
+    return {
+      backgroundColor,
+      textColor,
+      borderWidth: isToday ? 2 : 0,
+      borderColor: isToday ? colors.textPrimary : 'transparent',
+    };
+  }
 
   const rows: PairDayResult[][] = [];
   for (let i = 0; i < 25; i += 5) {
@@ -62,8 +63,8 @@ export function ChunkGrid({
   }
 
   return (
-    <View style={styles.card}>
-      <Text style={styles.header}>Chunk {chunkNumber}</Text>
+    <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+      <Text style={[styles.header, { color: colors.textPrimary }]}>Chunk {chunkNumber}</Text>
 
       <View style={styles.grid}>
         {rows.map((row, rowIndex) => (
@@ -109,19 +110,19 @@ export function ChunkGrid({
       <View style={styles.legend}>
         <View style={styles.legendItem}>
           <View style={[styles.legendDot, { backgroundColor: colors.success }]} />
-          <Text style={styles.legendLabel}>Both</Text>
+          <Text style={[styles.legendLabel, { color: colors.textTertiary }]}>Both</Text>
         </View>
         <View style={styles.legendItem}>
-          <View style={[styles.legendDot, { backgroundColor: '#3498DB' }]} />
-          <Text style={styles.legendLabel}>{myName}</Text>
+          <View style={[styles.legendDot, { backgroundColor: colors.water }]} />
+          <Text style={[styles.legendLabel, { color: colors.textTertiary }]}>{myName}</Text>
         </View>
         <View style={styles.legendItem}>
-          <View style={[styles.legendDot, { backgroundColor: '#9B59B6' }]} />
-          <Text style={styles.legendLabel}>{partnerName}</Text>
+          <View style={[styles.legendDot, { backgroundColor: colors.journal }]} />
+          <Text style={[styles.legendLabel, { color: colors.textTertiary }]}>{partnerName}</Text>
         </View>
         <View style={styles.legendItem}>
-          <View style={[styles.legendDot, { backgroundColor: '#EBEDF0' }]} />
-          <Text style={styles.legendLabel}>Missed</Text>
+          <View style={[styles.legendDot, { backgroundColor: colors.chunkMissed }]} />
+          <Text style={[styles.legendLabel, { color: colors.textTertiary }]}>Missed</Text>
         </View>
       </View>
     </View>
@@ -130,17 +131,14 @@ export function ChunkGrid({
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: colors.surface,
     borderRadius: borderRadius.md,
     padding: spacing.lg,
     borderWidth: 1,
-    borderColor: colors.border,
   },
   header: {
     fontSize: typography.base.fontSize,
     lineHeight: typography.base.lineHeight,
     fontWeight: fontWeights.semibold,
-    color: colors.textPrimary,
     marginBottom: spacing.md,
   },
   grid: {
@@ -185,6 +183,5 @@ const styles = StyleSheet.create({
   legendLabel: {
     fontSize: typography.xs.fontSize,
     lineHeight: typography.xs.lineHeight,
-    color: colors.textTertiary,
   },
 });

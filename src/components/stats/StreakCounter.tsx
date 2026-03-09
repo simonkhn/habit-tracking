@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { HabitIcon } from '../habits/HabitIcon';
-import { colors, typography, fontWeights, spacing, borderRadius } from '../../theme';
+import { useTheme, typography, fontWeights, spacing, borderRadius } from '../../theme';
 
 interface StreakCounterProps {
   habitLabel: string;
@@ -20,8 +20,10 @@ export function StreakCounter({
   longestStreak,
   completionRate,
 }: StreakCounterProps) {
+  const { colors } = useTheme();
+
   return (
-    <View style={styles.card}>
+    <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
       <View style={styles.header}>
         <View style={[styles.iconContainer, { backgroundColor: `${habitColor}1A` }]}>
           <HabitIcon name={habitIcon} size={18} color={habitColor} />
@@ -30,16 +32,16 @@ export function StreakCounter({
       </View>
       <View style={styles.stats}>
         <View style={styles.stat}>
-          <Text style={styles.statValue}>{currentStreak}</Text>
-          <Text style={styles.statLabel}>current</Text>
+          <Text style={[styles.statValue, { color: colors.textPrimary }]}>{currentStreak}</Text>
+          <Text style={[styles.statLabel, { color: colors.textTertiary }]}>current</Text>
         </View>
         <View style={styles.stat}>
-          <Text style={styles.statValue}>{longestStreak}</Text>
-          <Text style={styles.statLabel}>longest</Text>
+          <Text style={[styles.statValue, { color: colors.textPrimary }]}>{longestStreak}</Text>
+          <Text style={[styles.statLabel, { color: colors.textTertiary }]}>longest</Text>
         </View>
         <View style={styles.stat}>
-          <Text style={styles.statValue}>{Math.round(completionRate * 100)}%</Text>
-          <Text style={styles.statLabel}>rate</Text>
+          <Text style={[styles.statValue, { color: colors.textPrimary }]}>{Math.round(completionRate * 100)}%</Text>
+          <Text style={[styles.statLabel, { color: colors.textTertiary }]}>rate</Text>
         </View>
       </View>
     </View>
@@ -48,11 +50,9 @@ export function StreakCounter({
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: colors.surface,
     borderRadius: borderRadius.md,
     padding: spacing.lg,
     borderWidth: 1,
-    borderColor: colors.border,
   },
   header: {
     flexDirection: 'row',
@@ -81,11 +81,9 @@ const styles = StyleSheet.create({
   statValue: {
     ...typography.lg,
     fontWeight: fontWeights.bold,
-    color: colors.textPrimary,
   },
   statLabel: {
     ...typography.xs,
-    color: colors.textTertiary,
     marginTop: 2,
   },
 });

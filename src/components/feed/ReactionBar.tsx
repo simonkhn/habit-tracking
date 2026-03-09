@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, ScrollView, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { FeedInteraction } from '../../types/habit';
-import { colors, typography, spacing } from '../../theme';
+import { useTheme, typography, spacing } from '../../theme';
 
 interface ReactionBarProps {
   interaction: FeedInteraction | null;
@@ -31,6 +31,7 @@ const FULL_EMOJI_SET = [
 ];
 
 export function ReactionBar({ interaction, currentUserId, onReact }: ReactionBarProps) {
+  const { colors } = useTheme();
   const [showPicker, setShowPicker] = useState(false);
   const [showFullGrid, setShowFullGrid] = useState(false);
 
@@ -65,19 +66,33 @@ export function ReactionBar({ interaction, currentUserId, onReact }: ReactionBar
         {emojiGroups.map((group) => (
           <TouchableOpacity
             key={group.emoji}
-            style={[styles.chip, group.hasOwn && styles.chipOwn]}
+            style={[
+              styles.chip,
+              { backgroundColor: colors.background },
+              group.hasOwn && {
+                borderColor: `${colors.textPrimary}25`,
+                backgroundColor: `${colors.textPrimary}08`,
+              },
+            ]}
             onPress={() => onReact(group.emoji)}
             activeOpacity={0.7}
           >
             <Text style={styles.chipEmoji}>{group.emoji}</Text>
             {group.users.length > 1 && (
-              <Text style={styles.chipCount}>{group.users.length}</Text>
+              <Text style={[styles.chipCount, { color: colors.textSecondary }]}>{group.users.length}</Text>
             )}
           </TouchableOpacity>
         ))}
 
         <TouchableOpacity
-          style={[styles.addButton, showPicker && styles.addButtonActive]}
+          style={[
+            styles.addButton,
+            { backgroundColor: colors.background, borderColor: colors.border },
+            showPicker && {
+              backgroundColor: `${colors.textPrimary}08`,
+              borderColor: `${colors.textPrimary}20`,
+            },
+          ]}
           onPress={() => { setShowPicker(!showPicker); setShowFullGrid(false); }}
           activeOpacity={0.7}
         >
@@ -91,13 +106,13 @@ export function ReactionBar({ interaction, currentUserId, onReact }: ReactionBar
 
       {/* Emoji picker popup */}
       {showPicker && (
-        <View style={styles.picker}>
+        <View style={[styles.picker, { backgroundColor: colors.surface, borderColor: colors.border }]}>
           {!showFullGrid ? (
             <View style={styles.quickRow}>
               {QUICK_EMOJIS.map((emoji) => (
                 <TouchableOpacity
                   key={emoji}
-                  style={styles.quickEmoji}
+                  style={[styles.quickEmoji, { backgroundColor: colors.background }]}
                   onPress={() => handleEmojiSelect(emoji)}
                   activeOpacity={0.6}
                 >
@@ -133,12 +148,12 @@ export function ReactionBar({ interaction, currentUserId, onReact }: ReactionBar
                 </View>
               </ScrollView>
               <TouchableOpacity
-                style={styles.backButton}
+                style={[styles.backButton, { borderTopColor: colors.border }]}
                 onPress={() => setShowFullGrid(false)}
                 activeOpacity={0.7}
               >
                 <Ionicons name="chevron-back" size={12} color={colors.textTertiary} />
-                <Text style={styles.backText}>Quick emojis</Text>
+                <Text style={[styles.backText, { color: colors.textTertiary }]}>Quick emojis</Text>
               </TouchableOpacity>
             </View>
           )}
@@ -164,42 +179,28 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.sm,
     paddingVertical: 3,
     borderRadius: 12,
-    backgroundColor: colors.background,
     borderWidth: 1,
     borderColor: 'transparent',
-  },
-  chipOwn: {
-    borderColor: `${colors.textPrimary}25`,
-    backgroundColor: `${colors.textPrimary}08`,
   },
   chipEmoji: {
     fontSize: 14,
   },
   chipCount: {
     ...typography.xs,
-    color: colors.textSecondary,
     marginLeft: 3,
   },
   addButton: {
     width: 26,
     height: 26,
     borderRadius: 13,
-    backgroundColor: colors.background,
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: colors.border,
-  },
-  addButtonActive: {
-    backgroundColor: `${colors.textPrimary}08`,
-    borderColor: `${colors.textPrimary}20`,
   },
   picker: {
     marginTop: spacing.sm,
-    backgroundColor: colors.surface,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: colors.border,
     padding: spacing.sm,
   },
   quickRow: {
@@ -214,7 +215,6 @@ const styles = StyleSheet.create({
     borderRadius: 18,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: colors.background,
   },
   quickEmojiText: {
     fontSize: 20,
@@ -251,10 +251,8 @@ const styles = StyleSheet.create({
     marginTop: spacing.sm,
     paddingTop: spacing.sm,
     borderTopWidth: 1,
-    borderTopColor: colors.border,
   },
   backText: {
     ...typography.xs,
-    color: colors.textTertiary,
   },
 });
