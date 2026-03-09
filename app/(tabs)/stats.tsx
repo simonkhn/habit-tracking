@@ -11,9 +11,10 @@ import { useSharedStats } from '../../src/hooks/useSharedStats';
 import { useAuthStore } from '../../src/stores/authStore';
 import { getDayNumber, getHabitDate, getHabitDateString } from '../../src/utils/dates';
 import { HABIT_ORDER, CHUNK_SIZE_DAYS } from '../../src/config/habits';
-import { colors, typography, fontWeights, spacing } from '../../src/theme';
+import { useTheme, typography, fontWeights, spacing } from '../../src/theme';
 
 export default function StatsScreen() {
+  const { colors } = useTheme();
   const { stats, isLoading, myLogs, partnerLogs } = useSharedStats();
   const { profile, partnerProfile } = useAuthStore();
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
@@ -76,7 +77,7 @@ export default function StatsScreen() {
     return (
       <ScreenContainer>
         <View style={styles.loading}>
-          <Text style={styles.emptyText}>No data yet</Text>
+          <Text style={[styles.emptyText, { color: colors.textSecondary }]}>No data yet</Text>
         </View>
       </ScreenContainer>
     );
@@ -85,14 +86,14 @@ export default function StatsScreen() {
   return (
     <ScreenContainer>
       <View style={styles.header}>
-        <Text style={styles.title}>Stats</Text>
+        <Text style={[styles.title, { color: colors.textPrimary }]}>Stats</Text>
       </View>
 
       <DualRingHero
         myName={myName}
         partnerName={partnerName}
-        myCompletedHabits={stats.myTodayCompletedHabits}
-        partnerCompletedHabits={stats.partnerTodayCompletedHabits}
+        myHabitInfos={stats.myTodayHabitInfos}
+        partnerHabitInfos={stats.partnerTodayHabitInfos}
         totalHabits={HABIT_ORDER.length}
         dayNumber={stats.dayNumber}
         chunkNumber={stats.chunkNumber}
@@ -128,7 +129,7 @@ export default function StatsScreen() {
         />
       </View>
 
-      <Text style={styles.sectionTitle}>Habit Breakdown</Text>
+      <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>Habit Breakdown</Text>
       <HabitBreakdownTable
         comparisons={stats.habitComparisons}
         myName={myName}
@@ -160,7 +161,6 @@ const styles = StyleSheet.create({
   title: {
     ...typography.xl,
     fontWeight: fontWeights.bold,
-    color: colors.textPrimary,
   },
   loading: {
     flex: 1,
@@ -169,7 +169,6 @@ const styles = StyleSheet.create({
   },
   emptyText: {
     ...typography.md,
-    color: colors.textSecondary,
   },
   section: {
     marginTop: spacing.lg,
@@ -177,7 +176,6 @@ const styles = StyleSheet.create({
   sectionTitle: {
     ...typography.md,
     fontWeight: fontWeights.semibold,
-    color: colors.textPrimary,
     marginTop: spacing.xl,
     marginBottom: spacing.md,
   },

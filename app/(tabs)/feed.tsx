@@ -6,7 +6,7 @@ import { DualProgressHeader } from '../../src/components/feed/DualProgressHeader
 import { DayHeader } from '../../src/components/feed/DayHeader';
 import { FeedCard } from '../../src/components/feed/FeedCard';
 import { FeedEvent } from '../../src/types/habit';
-import { colors, typography, fontWeights, spacing } from '../../src/theme';
+import { useTheme, typography, fontWeights, spacing } from '../../src/theme';
 
 type FeedListItem =
   | { type: 'header' }
@@ -14,6 +14,7 @@ type FeedListItem =
   | { type: 'event'; event: FeedEvent };
 
 export default function FeedScreen() {
+  const { colors } = useTheme();
   const {
     feedDays,
     isLoading,
@@ -82,7 +83,7 @@ export default function FeedScreen() {
 
   if (isLoading) {
     return (
-      <SafeAreaView style={styles.container}>
+      <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
         <View style={styles.loading}>
           <ActivityIndicator size="large" color={colors.textPrimary} />
         </View>
@@ -91,8 +92,8 @@ export default function FeedScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.container}>
-      <Text style={styles.screenTitle}>Feed</Text>
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+      <Text style={[styles.screenTitle, { color: colors.textPrimary }]}>Feed</Text>
       <FlatList
         data={listData}
         keyExtractor={getItemKey}
@@ -101,7 +102,7 @@ export default function FeedScreen() {
         showsVerticalScrollIndicator={false}
         ListEmptyComponent={
           <View style={styles.empty}>
-            <Text style={styles.emptyText}>
+            <Text style={[styles.emptyText, { color: colors.textTertiary }]}>
               No activity yet today. Start completing habits!
             </Text>
           </View>
@@ -114,12 +115,10 @@ export default function FeedScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.background,
   },
   screenTitle: {
     ...typography.xl,
     fontWeight: fontWeights.bold,
-    color: colors.textPrimary,
     paddingHorizontal: 16,
     paddingTop: spacing.sm,
   },
@@ -138,7 +137,6 @@ const styles = StyleSheet.create({
   },
   emptyText: {
     ...typography.base,
-    color: colors.textTertiary,
     textAlign: 'center',
   },
 });

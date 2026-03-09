@@ -4,7 +4,7 @@ import { HabitLog, HabitId, DayHabits, WaterHabitData, ReadingHabitData, Workout
 import { HABIT_ORDER, getHabitDefinition, READING_TARGET_PAGES } from '../../config/habits';
 import { HabitIcon } from '../habits/HabitIcon';
 import { formatDateHeader } from '../../utils/dates';
-import { colors, typography, fontWeights, spacing, borderRadius } from '../../theme';
+import { useTheme, typography, fontWeights, spacing, borderRadius } from '../../theme';
 
 interface DayDetailSheetProps {
   visible: boolean;
@@ -40,6 +40,7 @@ function getHabitDetail(habitId: HabitId, habits: DayHabits | undefined, waterTa
 }
 
 function HabitRow({ habitId, habits, waterTarget }: { habitId: HabitId; habits: DayHabits | undefined; waterTarget: number }) {
+  const { colors } = useTheme();
   const def = getHabitDefinition(habitId);
   const completed = habits?.[habitId]?.completed ?? false;
   const detail = getHabitDetail(habitId, habits, waterTarget);
@@ -52,11 +53,11 @@ function HabitRow({ habitId, habits, waterTarget }: { habitId: HabitId; habits: 
             <HabitIcon name="checkmark" size={10} color="#fff" />
           </View>
         ) : (
-          <View style={rowStyles.missCircle} />
+          <View style={[rowStyles.missCircle, { borderColor: colors.border }]} />
         )}
       </View>
       {detail ? (
-        <Text style={rowStyles.detail} numberOfLines={1}>{detail}</Text>
+        <Text style={[rowStyles.detail, { color: colors.textSecondary }]} numberOfLines={1}>{detail}</Text>
       ) : null}
     </View>
   );
@@ -84,11 +85,9 @@ const rowStyles = StyleSheet.create({
     height: 18,
     borderRadius: 9,
     borderWidth: 2,
-    borderColor: colors.border,
   },
   detail: {
     ...typography.xs,
-    color: colors.textSecondary,
     marginLeft: spacing.xs,
     flex: 1,
   },
@@ -106,6 +105,7 @@ export function DayDetailSheet({
   dayLabel,
   onClose,
 }: DayDetailSheetProps) {
+  const { colors } = useTheme();
   const myHabits = myLog?.habits;
   const partnerHabits = partnerLog?.habits;
   const myCount = myHabits
@@ -123,29 +123,28 @@ export function DayDetailSheet({
       onRequestClose={onClose}
     >
       <Pressable style={styles.backdrop} onPress={onClose} />
-      <View style={styles.sheet}>
-        <View style={styles.handle} />
+      <View style={[styles.sheet, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+        <View style={[styles.handle, { backgroundColor: colors.border }]} />
 
-        <Text style={styles.dateHeader}>{formatDateHeader(date)}</Text>
-        <Text style={styles.dayLabel}>{dayLabel}</Text>
+        <Text style={[styles.dateHeader, { color: colors.textPrimary }]}>{formatDateHeader(date)}</Text>
+        <Text style={[styles.dayLabel, { color: colors.textSecondary }]}>{dayLabel}</Text>
 
-        {/* Column headers */}
-        <View style={styles.tableHeader}>
-          <Text style={styles.habitColHeader}>Habit</Text>
-          <Text style={styles.userColHeader}>{myName}</Text>
-          <Text style={styles.userColHeader}>{partnerName}</Text>
+        <View style={[styles.tableHeader, { borderBottomColor: colors.border }]}>
+          <Text style={[styles.habitColHeader, { color: colors.textTertiary }]}>Habit</Text>
+          <Text style={[styles.userColHeader, { color: colors.textTertiary }]}>{myName}</Text>
+          <Text style={[styles.userColHeader, { color: colors.textTertiary }]}>{partnerName}</Text>
         </View>
 
         <ScrollView style={styles.tableBody} bounces={false}>
           {HABIT_ORDER.map((habitId) => {
             const def = getHabitDefinition(habitId);
             return (
-              <View key={habitId} style={styles.tableRow}>
+              <View key={habitId} style={[styles.tableRow, { borderBottomColor: colors.border }]}>
                 <View style={styles.habitCol}>
                   <View style={[styles.iconContainer, { backgroundColor: `${def.color}1A` }]}>
                     <HabitIcon name={def.icon} size={14} color={def.color} />
                   </View>
-                  <Text style={styles.habitLabel} numberOfLines={1}>{def.label}</Text>
+                  <Text style={[styles.habitLabel, { color: colors.textPrimary }]} numberOfLines={1}>{def.label}</Text>
                 </View>
                 <View style={styles.userCol}>
                   <HabitRow habitId={habitId} habits={myHabits} waterTarget={myWaterTarget} />
@@ -158,11 +157,10 @@ export function DayDetailSheet({
           })}
         </ScrollView>
 
-        {/* Summary row */}
-        <View style={styles.summaryRow}>
-          <Text style={styles.summaryLabel}>Total</Text>
-          <Text style={styles.summaryValue}>{myCount}/{HABIT_ORDER.length}</Text>
-          <Text style={styles.summaryValue}>{partnerCount}/{HABIT_ORDER.length}</Text>
+        <View style={[styles.summaryRow, { borderTopColor: colors.border }]}>
+          <Text style={[styles.summaryLabel, { color: colors.textPrimary }]}>Total</Text>
+          <Text style={[styles.summaryValue, { color: colors.textPrimary }]}>{myCount}/{HABIT_ORDER.length}</Text>
+          <Text style={[styles.summaryValue, { color: colors.textPrimary }]}>{partnerCount}/{HABIT_ORDER.length}</Text>
         </View>
       </View>
     </Modal>
@@ -174,20 +172,17 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   sheet: {
-    backgroundColor: colors.surface,
     borderTopLeftRadius: borderRadius.xl,
     borderTopRightRadius: borderRadius.xl,
     paddingHorizontal: spacing.xl,
     paddingBottom: spacing.xxxl,
     borderTopWidth: 1,
-    borderColor: colors.border,
     maxHeight: '70%',
   },
   handle: {
     width: 36,
     height: 4,
     borderRadius: 2,
-    backgroundColor: colors.border,
     alignSelf: 'center',
     marginTop: spacing.sm,
     marginBottom: spacing.lg,
@@ -195,11 +190,9 @@ const styles = StyleSheet.create({
   dateHeader: {
     ...typography.lg,
     fontWeight: fontWeights.semibold,
-    color: colors.textPrimary,
   },
   dayLabel: {
     ...typography.sm,
-    color: colors.textSecondary,
     marginTop: spacing.xs,
     marginBottom: spacing.lg,
   },
@@ -207,12 +200,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     paddingBottom: spacing.sm,
     borderBottomWidth: 1,
-    borderBottomColor: colors.border,
   },
   habitColHeader: {
     ...typography.xs,
     fontWeight: fontWeights.semibold,
-    color: colors.textTertiary,
     flex: 2,
     textTransform: 'uppercase',
     letterSpacing: 0.5,
@@ -220,7 +211,6 @@ const styles = StyleSheet.create({
   userColHeader: {
     ...typography.xs,
     fontWeight: fontWeights.semibold,
-    color: colors.textTertiary,
     flex: 1,
     textAlign: 'center',
     textTransform: 'uppercase',
@@ -233,7 +223,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     borderBottomWidth: 1,
-    borderBottomColor: colors.border,
   },
   habitCol: {
     flex: 2,
@@ -251,7 +240,6 @@ const styles = StyleSheet.create({
   habitLabel: {
     ...typography.sm,
     fontWeight: fontWeights.medium,
-    color: colors.textPrimary,
     flex: 1,
   },
   userCol: {
@@ -262,19 +250,16 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     paddingTop: spacing.md,
     borderTopWidth: 1,
-    borderTopColor: colors.border,
     marginTop: spacing.xs,
   },
   summaryLabel: {
     ...typography.sm,
     fontWeight: fontWeights.semibold,
-    color: colors.textPrimary,
     flex: 2,
   },
   summaryValue: {
     ...typography.sm,
     fontWeight: fontWeights.bold,
-    color: colors.textPrimary,
     flex: 1,
     textAlign: 'center',
   },

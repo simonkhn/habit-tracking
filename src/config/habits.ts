@@ -5,6 +5,7 @@ export const HABIT_DEFINITIONS: HabitDefinition[] = [
   {
     id: 'wakeUpOnTime',
     label: 'Wake Up On Time',
+    shortLabel: 'Wake Up',
     type: 'binary',
     color: colors.wakeUpOnTime,
     icon: 'alarm-outline',
@@ -13,6 +14,7 @@ export const HABIT_DEFINITIONS: HabitDefinition[] = [
   {
     id: 'morningSunlight',
     label: 'Morning Sunlight',
+    shortLabel: 'Sunlight',
     type: 'binary',
     color: colors.morningSunlight,
     icon: 'sunny-outline',
@@ -21,6 +23,7 @@ export const HABIT_DEFINITIONS: HabitDefinition[] = [
   {
     id: 'water',
     label: 'Water',
+    shortLabel: 'Water',
     type: 'progressive',
     color: colors.water,
     icon: 'water-outline',
@@ -29,6 +32,7 @@ export const HABIT_DEFINITIONS: HabitDefinition[] = [
   {
     id: 'journal',
     label: 'Journal',
+    shortLabel: 'Journal',
     type: 'binary',
     color: colors.journal,
     icon: 'book-outline',
@@ -37,6 +41,7 @@ export const HABIT_DEFINITIONS: HabitDefinition[] = [
   {
     id: 'reading',
     label: 'Read',
+    shortLabel: 'Read',
     type: 'progressive',
     color: colors.reading,
     icon: 'reader-outline',
@@ -45,6 +50,7 @@ export const HABIT_DEFINITIONS: HabitDefinition[] = [
   {
     id: 'workout',
     label: 'Workout',
+    shortLabel: 'Workout',
     type: 'binary-with-note',
     color: colors.workout,
     icon: 'fitness-outline',
@@ -53,6 +59,7 @@ export const HABIT_DEFINITIONS: HabitDefinition[] = [
   {
     id: 'meditate',
     label: 'Meditate',
+    shortLabel: 'Meditate',
     type: 'binary',
     color: colors.meditate,
     icon: 'leaf-outline',

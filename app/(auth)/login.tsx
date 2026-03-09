@@ -3,10 +3,11 @@ import { View, Text, TextInput, StyleSheet, KeyboardAvoidingView, Platform } fro
 import { useRouter } from 'expo-router';
 import { signIn } from '../../src/services/auth';
 import { Button } from '../../src/components/ui/Button';
-import { colors, typography, fontWeights, spacing, borderRadius } from '../../src/theme';
+import { useTheme, typography, fontWeights, spacing, borderRadius } from '../../src/theme';
 
 export default function LoginScreen() {
   const router = useRouter();
+  const { colors } = useTheme();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -33,15 +34,15 @@ export default function LoginScreen() {
 
   return (
     <KeyboardAvoidingView
-      style={styles.container}
+      style={[styles.container, { backgroundColor: colors.background }]}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
       <View style={styles.content}>
-        <Text style={styles.title}>75-Day Challenge</Text>
-        <Text style={styles.subtitle}>Welcome back</Text>
+        <Text style={[styles.title, { color: colors.textPrimary }]}>75-Day Challenge</Text>
+        <Text style={[styles.subtitle, { color: colors.textSecondary }]}>Welcome back</Text>
 
         <TextInput
-          style={styles.input}
+          style={[styles.input, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.textPrimary }]}
           placeholder="Email"
           placeholderTextColor={colors.textTertiary}
           value={email}
@@ -51,7 +52,7 @@ export default function LoginScreen() {
         />
 
         <TextInput
-          style={styles.input}
+          style={[styles.input, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.textPrimary }]}
           placeholder="Password"
           placeholderTextColor={colors.textTertiary}
           value={password}
@@ -59,7 +60,7 @@ export default function LoginScreen() {
           secureTextEntry
         />
 
-        {error ? <Text style={styles.error}>{error}</Text> : null}
+        {error ? <Text style={[styles.error, { color: colors.error }]}>{error}</Text> : null}
 
         <Button
           title="Sign In"
@@ -82,7 +83,6 @@ export default function LoginScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.background,
   },
   content: {
     flex: 1,
@@ -92,29 +92,23 @@ const styles = StyleSheet.create({
   title: {
     ...typography.xxl,
     fontWeight: fontWeights.bold,
-    color: colors.textPrimary,
     textAlign: 'center',
   },
   subtitle: {
     ...typography.md,
-    color: colors.textSecondary,
     textAlign: 'center',
     marginTop: spacing.sm,
     marginBottom: spacing.xxxl,
   },
   input: {
-    backgroundColor: colors.surface,
     borderRadius: borderRadius.sm,
     borderWidth: 1,
-    borderColor: colors.border,
     padding: spacing.lg,
     ...typography.base,
-    color: colors.textPrimary,
     marginBottom: spacing.md,
   },
   error: {
     ...typography.sm,
-    color: colors.error,
     textAlign: 'center',
     marginBottom: spacing.md,
   },

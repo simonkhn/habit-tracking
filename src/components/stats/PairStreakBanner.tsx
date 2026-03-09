@@ -1,84 +1,56 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { colors, typography, fontWeights, spacing, borderRadius } from '../../theme';
+import { useTheme, typography, fontWeights, spacing, borderRadius } from '../../theme';
 
 interface PairStreakBannerProps {
   currentStreak: number;
   longestStreak: number;
 }
 
-function getFlameConfig(streak: number): { size: number; color: string } {
-  if (streak <= 0) return { size: 28, color: colors.textTertiary };
-  if (streak <= 6) return { size: 32, color: '#E67E22' };
-  if (streak <= 13) return { size: 36, color: '#E67E22' };
-  return { size: 40, color: '#E74C3C' };
-}
-
 export function PairStreakBanner({ currentStreak, longestStreak }: PairStreakBannerProps) {
-  const flame = getFlameConfig(currentStreak);
+  const { colors } = useTheme();
   const isActive = currentStreak > 0;
+  const flameColor = currentStreak <= 0 ? colors.textTertiary : currentStreak <= 13 ? colors.pairStreakActiveBorder : colors.error;
 
   return (
     <View
       style={[
-        styles.card,
-        isActive && styles.cardActive,
+        styles.row,
+        { backgroundColor: colors.surface, borderColor: colors.border },
+        isActive && { borderColor: colors.pairStreakActiveBorder, backgroundColor: colors.pairStreakActiveBg },
       ]}
     >
-      <Text style={styles.label}>PAIR STREAK</Text>
-
-      <View style={styles.mainRow}>
-        <Ionicons name="flame-outline" size={flame.size} color={flame.color} />
-
-        <View>
-          <Text style={styles.streakNumber}>{currentStreak}</Text>
-          <Text style={styles.streakLabel}>day pair streak</Text>
-        </View>
-      </View>
-
-      <Text style={styles.best}>Best: {longestStreak} days</Text>
+      <Ionicons name="flame" size={22} color={flameColor} />
+      <Text style={[styles.streakText, { color: colors.textPrimary }]}>
+        <Text style={styles.streakNumber}>{currentStreak}</Text>
+        {'-day pair streak'}
+      </Text>
+      <View style={styles.spacer} />
+      <Text style={[styles.best, { color: colors.textTertiary }]}>best: {longestStreak}</Text>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  card: {
-    backgroundColor: colors.surface,
-    borderRadius: borderRadius.md,
-    padding: spacing.lg,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  cardActive: {
-    borderColor: '#E67E22',
-    backgroundColor: '#FFF8F0',
-  },
-  label: {
-    ...typography.xs,
-    fontWeight: fontWeights.semibold,
-    color: colors.textTertiary,
-    letterSpacing: 1,
-    marginBottom: spacing.sm,
-  },
-  mainRow: {
+  row: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.md,
+    gap: spacing.sm,
+    borderRadius: borderRadius.md,
+    padding: spacing.md,
+    borderWidth: 1,
+  },
+  streakText: {
+    ...typography.sm,
   },
   streakNumber: {
-    ...typography.xxl,
     fontWeight: fontWeights.bold,
-    color: colors.textPrimary,
   },
-  streakLabel: {
-    ...typography.sm,
-    color: colors.textSecondary,
+  spacer: {
+    flex: 1,
   },
   best: {
     ...typography.xs,
-    color: colors.textTertiary,
-    textAlign: 'right',
-    marginTop: spacing.sm,
   },
 });

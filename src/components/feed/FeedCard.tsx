@@ -5,7 +5,7 @@ import { FeedEvent } from '../../types/habit';
 import { ReactionBar } from './ReactionBar';
 import { CommentSection } from './CommentSection';
 import { AllCompleteCard } from './AllCompleteCard';
-import { colors, typography, fontWeights, spacing, borderRadius } from '../../theme';
+import { useTheme, typography, fontWeights, spacing, borderRadius } from '../../theme';
 import { format } from 'date-fns';
 
 interface FeedCardProps {
@@ -25,6 +25,8 @@ export function FeedCard({
   onReact,
   onComment,
 }: FeedCardProps) {
+  const { colors } = useTheme();
+
   if (event.habitType === 'allComplete') {
     return (
       <AllCompleteCard
@@ -42,7 +44,7 @@ export function FeedCard({
   const isOwn = event.userId === currentUserId;
 
   return (
-    <View style={styles.card}>
+    <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
       <View style={[styles.accent, { backgroundColor: event.habitColor }]} />
       <View style={styles.content}>
         <View style={styles.topRow}>
@@ -59,8 +61,8 @@ export function FeedCard({
             />
           </View>
           <View style={styles.textCol}>
-            <Text style={styles.flavorText}>{event.flavorText}</Text>
-            <Text style={styles.time}>{timeStr}</Text>
+            <Text style={[styles.flavorText, { color: colors.textPrimary }]}>{event.flavorText}</Text>
+            <Text style={[styles.time, { color: colors.textTertiary }]}>{timeStr}</Text>
           </View>
         </View>
 
@@ -83,10 +85,8 @@ export function FeedCard({
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: colors.surface,
     borderRadius: borderRadius.md,
     borderWidth: 1,
-    borderColor: colors.border,
     overflow: 'hidden',
     marginBottom: spacing.md,
     flexDirection: 'row',
@@ -116,11 +116,9 @@ const styles = StyleSheet.create({
   flavorText: {
     ...typography.base,
     fontWeight: fontWeights.semibold,
-    color: colors.textPrimary,
   },
   time: {
     ...typography.xs,
-    color: colors.textTertiary,
     marginTop: 2,
   },
 });

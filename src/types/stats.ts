@@ -67,10 +67,12 @@ export interface SharedStats {
   myHabitStreaks: HabitStreak[];
   myTodayCompletedCount: number;
   myTodayCompletedHabits: boolean[];
+  myTodayHabitInfos: { habitIndex: number; completedAt: number }[];
   partnerDailyStats: DayStats[];
   partnerHabitStreaks: HabitStreak[];
   partnerTodayCompletedCount: number;
   partnerTodayCompletedHabits: boolean[];
+  partnerTodayHabitInfos: { habitIndex: number; completedAt: number }[];
   pairStreak: number;
   longestPairStreak: number;
   pairDayResults: PairDayResult[];

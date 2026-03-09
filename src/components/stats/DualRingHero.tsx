@@ -1,52 +1,82 @@
-import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import React, { useState, useEffect, useMemo } from 'react';
+import { View, Text, StyleSheet, Pressable } from 'react-native';
 import Svg, { Circle } from 'react-native-svg';
-import { colors, typography, fontWeights, spacing, borderRadius } from '../../theme';
+import { useTheme, typography, fontWeights, spacing, borderRadius } from '../../theme';
+import { HABIT_ORDER, getHabitDefinition } from '../../config/habits';
+
+export interface CompletedHabitInfo {
+  habitIndex: number; // index in HABIT_ORDER (for color lookup)
+  completedAt: number; // timestamp millis, 0 if not completed
+}
 
 interface DualRingHeroProps {
   myName: string;
   partnerName: string;
-  myCompletedHabits: boolean[];
-  partnerCompletedHabits: boolean[];
+  myHabitInfos: CompletedHabitInfo[];
+  partnerHabitInfos: CompletedHabitInfo[];
   totalHabits: number;
   dayNumber: number;
   chunkNumber: number;
 }
 
-const HABIT_COLORS = [
-  '#E67E22', // wakeUpOnTime
-  '#F5A623', // morningSunlight
-  '#3498DB', // water
-  '#9B59B6', // journal
-  '#27AE60', // reading
-  '#E74C3C', // workout
-  '#00BCD4', // meditate
-];
+const HABIT_LABELS = ['Wake Up', 'Sunlight', 'Water', 'Journal', 'Read', 'Workout', 'Meditate'];
 
 const RING_SIZE = 110;
+const SVG_SIZE = RING_SIZE + 4; // extra padding to prevent clipping
 const STROKE_WIDTH = 8;
 const RADIUS = (RING_SIZE - STROKE_WIDTH) / 2;
 const CIRCUMFERENCE = 2 * Math.PI * RADIUS;
 const SEGMENT_GAP = 3;
 
 function CompletionRing({
-  completedHabits,
+  habitInfos,
   total,
+  onSegmentPress,
 }: {
-  completedHabits: boolean[];
+  habitInfos: CompletedHabitInfo[];
   total: number;
+  onSegmentPress?: (habitIndex: number | null) => void;
 }) {
-  const completedCount = completedHabits.filter(Boolean).length;
+  const { colors } = useTheme();
+
+  const habitColors = useMemo(
+    () => HABIT_ORDER.map((id) => getHabitDefinition(id).color),
+    [],
+  );
+
+  // Sort completed habits by completedAt timestamp
+  const completed = habitInfos
+    .filter(h => h.completedAt > 0)
+    .sort((a, b) => a.completedAt - b.completedAt);
+
+  const completedCount = completed.length;
   const isComplete = completedCount >= total;
-  const cx = RING_SIZE / 2;
-  const cy = RING_SIZE / 2;
+  const cx = SVG_SIZE / 2;
+  const cy = SVG_SIZE / 2;
   const segmentLength = (CIRCUMFERENCE - SEGMENT_GAP * total) / total;
+  const segmentAngle = 360 / total;
+
+  // Build segment data: first N segments colored (in completion order), rest gray
+  const segments = Array.from({ length: total }, (_, i) => {
+    if (i < completed.length) {
+      return {
+        color: habitColors[completed[i].habitIndex] || colors.textPrimary,
+        habitIndex: completed[i].habitIndex,
+        isCompleted: true,
+      };
+    }
+    return {
+      color: colors.border,
+      habitIndex: -1,
+      isCompleted: false,
+    };
+  });
 
   return (
     <View style={ringStyles.container}>
-      <Svg width={RING_SIZE} height={RING_SIZE}>
+      <Svg width={SVG_SIZE} height={SVG_SIZE}>
         {/* Background segments */}
-        {completedHabits.map((_, index) => {
+        {segments.map((_, index) => {
           const offset = index * (segmentLength + SEGMENT_GAP);
           const rotation = -90 + (offset / CIRCUMFERENCE) * 360;
           return (
@@ -64,9 +94,9 @@ function CompletionRing({
             />
           );
         })}
-        {/* Colored segments for completed habits */}
-        {completedHabits.map((completed, index) => {
-          if (!completed) return null;
+        {/* Colored segments for completed habits (in completion order) */}
+        {segments.map((seg, index) => {
+          if (!seg.isCompleted) return null;
           const offset = index * (segmentLength + SEGMENT_GAP);
           const rotation = -90 + (offset / CIRCUMFERENCE) * 360;
           return (
@@ -75,7 +105,7 @@ function CompletionRing({
               cx={cx}
               cy={cy}
               r={RADIUS}
-              stroke={HABIT_COLORS[index] || colors.textPrimary}
+              stroke={seg.color}
               strokeWidth={isComplete ? STROKE_WIDTH + 2 : STROKE_WIDTH}
               fill="none"
               strokeDasharray={`${segmentLength} ${CIRCUMFERENCE - segmentLength}`}
@@ -86,9 +116,28 @@ function CompletionRing({
           );
         })}
       </Svg>
+      {/* Touch targets for each segment */}
+      {onSegmentPress &&
+        segments.map((seg, i) => {
+          if (!seg.isCompleted) return null;
+          const angleDeg = -90 + segmentAngle * i + segmentAngle / 2;
+          const angleRad = (angleDeg * Math.PI) / 180;
+          const touchX = cx + RADIUS * Math.cos(angleRad) - 10;
+          const touchY = cy + RADIUS * Math.sin(angleRad) - 10;
+          return (
+            <Pressable
+              key={`touch-${i}`}
+              onPress={() => onSegmentPress(seg.habitIndex)}
+              style={[
+                ringStyles.touchTarget,
+                { left: touchX, top: touchY },
+              ]}
+            />
+          );
+        })}
       <View style={ringStyles.labelContainer}>
-        <Text style={ringStyles.count}>{completedCount}</Text>
-        <Text style={ringStyles.total}>/{total}</Text>
+        <Text style={[ringStyles.count, { color: colors.textPrimary }]}>{completedCount}</Text>
+        <Text style={[ringStyles.total, { color: colors.textTertiary }]}>/{total}</Text>
       </View>
     </View>
   );
@@ -98,11 +147,19 @@ const ringStyles = StyleSheet.create({
   container: {
     alignItems: 'center',
     justifyContent: 'center',
+    width: SVG_SIZE,
+    height: SVG_SIZE,
+  },
+  touchTarget: {
+    position: 'absolute',
+    width: 20,
+    height: 20,
+    borderRadius: 10,
   },
   labelContainer: {
     position: 'absolute',
-    width: RING_SIZE,
-    height: RING_SIZE,
+    width: SVG_SIZE,
+    height: SVG_SIZE,
     alignItems: 'center',
     justifyContent: 'center',
     flexDirection: 'row',
@@ -110,11 +167,9 @@ const ringStyles = StyleSheet.create({
   count: {
     ...typography.xl,
     fontWeight: fontWeights.bold,
-    color: colors.textPrimary,
   },
   total: {
     ...typography.xs,
-    color: colors.textTertiary,
   },
 });
 
@@ -138,14 +193,17 @@ function getMotivationalMessage(
 export function DualRingHero({
   myName,
   partnerName,
-  myCompletedHabits,
-  partnerCompletedHabits,
+  myHabitInfos,
+  partnerHabitInfos,
   totalHabits,
   dayNumber,
   chunkNumber,
 }: DualRingHeroProps) {
-  const myCount = myCompletedHabits.filter(Boolean).length;
-  const partnerCount = partnerCompletedHabits.filter(Boolean).length;
+  const { colors } = useTheme();
+  const [selectedHabit, setSelectedHabit] = useState<number | null>(null);
+
+  const myCount = myHabitInfos.filter(h => h.completedAt > 0).length;
+  const partnerCount = partnerHabitInfos.filter(h => h.completedAt > 0).length;
   const message = getMotivationalMessage(
     myName,
     partnerName,
@@ -154,37 +212,64 @@ export function DualRingHero({
     totalHabits,
   );
 
+  // Auto-dismiss tooltip after 2 seconds
+  useEffect(() => {
+    if (selectedHabit === null) return;
+    const timer = setTimeout(() => {
+      setSelectedHabit(null);
+    }, 2000);
+    return () => clearTimeout(timer);
+  }, [selectedHabit]);
+
+  const handleSegmentPress = (habitIndex: number | null) => {
+    setSelectedHabit(prev => (prev === habitIndex ? null : habitIndex));
+  };
+
   return (
-    <View style={styles.card}>
-      <Text style={styles.dayLabel}>
+    <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+      <Text style={[styles.dayLabel, { color: colors.textSecondary }]}>
         Day {dayNumber} · Chunk {chunkNumber}
       </Text>
+      {selectedHabit !== null && (
+        <View style={styles.tooltipContainer}>
+          <View style={[styles.tooltip, { backgroundColor: colors.textPrimary }]}>
+            <Text style={[styles.tooltipText, { color: colors.textOnPrimary }]}>
+              {HABIT_LABELS[selectedHabit] ?? 'Habit'}
+            </Text>
+          </View>
+        </View>
+      )}
       <View style={styles.ringsRow}>
         <View style={styles.ringColumn}>
-          <CompletionRing completedHabits={myCompletedHabits} total={totalHabits} />
-          <Text style={styles.name}>{myName}</Text>
+          <CompletionRing
+            habitInfos={myHabitInfos}
+            total={totalHabits}
+            onSegmentPress={handleSegmentPress}
+          />
+          <Text style={[styles.name, { color: colors.textSecondary }]}>{myName}</Text>
         </View>
         <View style={styles.ringColumn}>
-          <CompletionRing completedHabits={partnerCompletedHabits} total={totalHabits} />
-          <Text style={styles.name}>{partnerName}</Text>
+          <CompletionRing
+            habitInfos={partnerHabitInfos}
+            total={totalHabits}
+            onSegmentPress={handleSegmentPress}
+          />
+          <Text style={[styles.name, { color: colors.textSecondary }]}>{partnerName}</Text>
         </View>
       </View>
-      <Text style={styles.motivationalMessage}>{message}</Text>
+      <Text style={[styles.motivationalMessage, { color: colors.textSecondary }]}>{message}</Text>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: colors.surface,
     borderRadius: borderRadius.md,
     padding: spacing.lg,
     borderWidth: 1,
-    borderColor: colors.border,
   },
   dayLabel: {
     ...typography.base,
-    color: colors.textSecondary,
     textAlign: 'center',
     marginBottom: spacing.lg,
   },
@@ -198,14 +283,25 @@ const styles = StyleSheet.create({
   name: {
     ...typography.sm,
     fontWeight: fontWeights.semibold,
-    color: colors.textSecondary,
     marginTop: spacing.sm,
   },
   motivationalMessage: {
     ...typography.sm,
-    color: colors.textSecondary,
     textAlign: 'center',
     marginTop: spacing.lg,
     fontStyle: 'italic',
+  },
+  tooltipContainer: {
+    alignItems: 'center',
+    marginBottom: spacing.sm,
+  },
+  tooltip: {
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
+    borderRadius: borderRadius.sm,
+  },
+  tooltipText: {
+    ...typography.xs,
+    fontWeight: fontWeights.semibold,
   },
 });

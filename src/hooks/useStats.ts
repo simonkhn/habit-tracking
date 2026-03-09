@@ -36,7 +36,7 @@ export function useStats() {
         }));
 
         const habitStreaks: HabitStreak[] = HABIT_ORDER.map((habitId) => {
-          const { current, longest } = calculateStreak(logs, habitId);
+          const { current, longest } = calculateStreak(logs, habitId, endDate);
           const rate = calculateCompletionRate(logs, habitId);
           return {
             habitId,

@@ -4,7 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { DayHabits, WaterHabitData, ReadingHabitData } from '../../types/habit';
 import { HABIT_ORDER, getHabitDefinition } from '../../config/habits';
 import { Card } from '../ui/Card';
-import { colors, typography, fontWeights, spacing } from '../../theme';
+import { useTheme, typography, fontWeights, spacing } from '../../theme';
 
 interface ProgressSideProps {
   name: string;
@@ -15,17 +15,18 @@ interface ProgressSideProps {
 }
 
 function ProgressSide({ name, habits, completedCount, totalHabits, expanded }: ProgressSideProps) {
+  const { colors } = useTheme();
   const progress = totalHabits > 0 ? completedCount / totalHabits : 0;
 
   return (
     <View style={styles.side}>
       <View style={styles.nameRow}>
-        <Text style={styles.name}>{name}</Text>
-        <Text style={styles.count}>
+        <Text style={[styles.name, { color: colors.textPrimary }]}>{name}</Text>
+        <Text style={[styles.count, { color: colors.textSecondary }]}>
           {completedCount}/{totalHabits}
         </Text>
       </View>
-      <View style={styles.barTrack}>
+      <View style={[styles.barTrack, { backgroundColor: colors.border }]}>
         <View
           style={[
             styles.barFill,
@@ -72,7 +73,7 @@ function ProgressSide({ name, habits, completedCount, totalHabits, expanded }: P
                 return (
                   <View key={id} style={styles.habitRow}>
                     <View style={[styles.habitDot, { backgroundColor: completed ? def.color : `${def.color}15` }]} />
-                    <Text style={[styles.habitLabel, !completed && styles.habitLabelIncomplete]}>
+                    <Text style={[styles.habitLabel, { color: colors.textPrimary }, !completed && { color: colors.textTertiary }]}>
                       {def.label}{detail}
                     </Text>
                     {completed && (
@@ -108,13 +109,14 @@ export function DualProgressHeader({
   partnerCompletedCount,
   totalHabits,
 }: DualProgressHeaderProps) {
+  const { colors } = useTheme();
   const [expanded, setExpanded] = useState(false);
 
   return (
     <TouchableOpacity activeOpacity={0.7} onPress={() => setExpanded(!expanded)}>
       <Card style={styles.card}>
         <View style={styles.titleRow}>
-          <Text style={styles.title}>Today's Progress</Text>
+          <Text style={[styles.title, { color: colors.textSecondary }]}>Today's Progress</Text>
           <Ionicons
             name={expanded ? 'chevron-up' : 'chevron-down'}
             size={16}
@@ -129,7 +131,7 @@ export function DualProgressHeader({
             totalHabits={totalHabits}
             expanded={expanded}
           />
-          <View style={styles.divider} />
+          <View style={[styles.divider, { backgroundColor: colors.border }]} />
           <ProgressSide
             name={partnerName}
             habits={partnerHabits}
@@ -156,7 +158,6 @@ const styles = StyleSheet.create({
   title: {
     ...typography.sm,
     fontWeight: fontWeights.semibold,
-    color: colors.textSecondary,
     textTransform: 'uppercase',
     letterSpacing: 0.5,
   },
@@ -169,7 +170,6 @@ const styles = StyleSheet.create({
   },
   divider: {
     width: 1,
-    backgroundColor: colors.border,
     alignSelf: 'stretch',
     marginHorizontal: spacing.md,
   },
@@ -182,16 +182,13 @@ const styles = StyleSheet.create({
   name: {
     ...typography.base,
     fontWeight: fontWeights.semibold,
-    color: colors.textPrimary,
   },
   count: {
     ...typography.sm,
     fontWeight: fontWeights.bold,
-    color: colors.textSecondary,
   },
   barTrack: {
     height: 6,
-    backgroundColor: colors.border,
     borderRadius: 3,
     overflow: 'hidden',
     marginBottom: spacing.sm,
@@ -226,11 +223,7 @@ const styles = StyleSheet.create({
   },
   habitLabel: {
     ...typography.xs,
-    color: colors.textPrimary,
     flex: 1,
-  },
-  habitLabelIncomplete: {
-    color: colors.textTertiary,
   },
   check: {
     marginLeft: 2,

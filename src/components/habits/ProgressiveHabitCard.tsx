@@ -12,7 +12,7 @@ import { HabitDefinition, WaterHabitData, ReadingHabitData } from '../../types/h
 import { HabitIcon } from './HabitIcon';
 import { WATER_INCREMENT_OZ, READING_TARGET_PAGES } from '../../config/habits';
 import { useAuthStore } from '../../stores/authStore';
-import { colors, typography, fontWeights, spacing, borderRadius } from '../../theme';
+import { useTheme, typography, fontWeights, spacing, borderRadius } from '../../theme';
 
 const HOLD_DURATION = 500;
 
@@ -27,6 +27,7 @@ export function ProgressiveHabitCard({
   data,
   onUpdate,
 }: ProgressiveHabitCardProps) {
+  const { colors } = useTheme();
   const { profile } = useAuthStore();
   const isWater = definition.id === 'water';
 
@@ -134,6 +135,7 @@ export function ProgressiveHabitCard({
       <Animated.View
         style={[
           styles.card,
+          { backgroundColor: colors.surface, borderColor: colors.border },
           data.completed && styles.cardCompleted,
           cardAnimStyle,
         ]}
@@ -155,17 +157,17 @@ export function ProgressiveHabitCard({
 
           <View style={styles.textContainer}>
             <Text
-              style={[styles.label, data.completed && styles.labelCompleted]}
+              style={[styles.label, { color: colors.textPrimary }, data.completed && [styles.labelCompleted, { color: colors.textTertiary }]]}
             >
               {definition.label}
             </Text>
-            <Text style={styles.subtitle}>
+            <Text style={[styles.subtitle, { color: colors.textTertiary }]}>
               {target} {unit} target
             </Text>
           </View>
 
           {isWater && !data.completed && (
-            <View style={styles.cupContainer}>
+            <View style={[styles.cupContainer, { borderColor: `${colors.water}60` }]}>
               <View
                 style={[
                   styles.cupFill,
@@ -180,17 +182,17 @@ export function ProgressiveHabitCard({
 
           {data.completed ? (
             <>
-              <Text style={styles.undoLabel}>Undo</Text>
+              <Text style={[styles.undoLabel, { color: colors.textTertiary }]}>Undo</Text>
               <View
                 style={[styles.checkmark, { backgroundColor: definition.color }]}
               >
-                <HabitIcon name="checkmark" size={16} color="#fff" />
+                <HabitIcon name="checkmark" size={16} color={colors.textOnPrimary} />
               </View>
             </>
           ) : (
             <View style={styles.controls}>
               <TouchableOpacity
-                style={[styles.controlButton, styles.decrementButton]}
+                style={[styles.controlButton, { backgroundColor: colors.background }]}
                 onPress={handleDecrement}
                 disabled={localValue <= 0}
                 activeOpacity={0.7}
@@ -201,7 +203,7 @@ export function ProgressiveHabitCard({
                   color={localValue <= 0 ? colors.textTertiary : colors.textSecondary}
                 />
               </TouchableOpacity>
-              <Text style={styles.valueText}>
+              <Text style={[styles.valueText, { color: colors.textSecondary }]}>
                 {localValue}/{target}
               </Text>
               <TouchableOpacity
@@ -224,11 +226,9 @@ export function ProgressiveHabitCard({
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: colors.surface,
     borderRadius: borderRadius.md,
     padding: spacing.lg,
     borderWidth: 1,
-    borderColor: colors.border,
     overflow: 'hidden',
     position: 'relative',
   },
@@ -260,15 +260,12 @@ const styles = StyleSheet.create({
   label: {
     ...typography.base,
     fontWeight: fontWeights.semibold,
-    color: colors.textPrimary,
   },
   labelCompleted: {
     textDecorationLine: 'line-through',
-    color: colors.textTertiary,
   },
   subtitle: {
     ...typography.sm,
-    color: colors.textTertiary,
     marginTop: 2,
   },
   cupContainer: {
@@ -278,7 +275,6 @@ const styles = StyleSheet.create({
     borderBottomLeftRadius: 8,
     borderBottomRightRadius: 8,
     borderWidth: 1.5,
-    borderColor: `${colors.water}60`,
     overflow: 'hidden',
     justifyContent: 'flex-end',
     marginRight: spacing.sm,
@@ -299,21 +295,15 @@ const styles = StyleSheet.create({
     borderRadius: 18,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: colors.background,
-  },
-  decrementButton: {
-    backgroundColor: colors.background,
   },
   valueText: {
     ...typography.sm,
     fontWeight: fontWeights.medium,
-    color: colors.textSecondary,
     minWidth: 40,
     textAlign: 'center',
   },
   undoLabel: {
     ...typography.xs,
-    color: colors.textTertiary,
     marginRight: spacing.xs,
   },
   checkmark: {

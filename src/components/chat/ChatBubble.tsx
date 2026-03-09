@@ -9,9 +9,9 @@ import Animated, {
   interpolate,
   runOnJS,
 } from 'react-native-reanimated';
-import { ChatMessage, ChatReplyTo } from '../../types/chat';
+import { ChatMessage, ChatReplyTo, ChatTag } from '../../types/chat';
 import { FeedInteraction } from '../../types/habit';
-import { colors, typography, fontWeights, spacing, borderRadius } from '../../theme';
+import { useTheme, typography, fontWeights, spacing, borderRadius } from '../../theme';
 
 const QUICK_EMOJIS = ['\u{1F525}', '\u2764\uFE0F', '\u{1F44F}', '\u{1F4AA}', '\u2705'];
 const SWIPE_MAX = 80;
@@ -30,15 +30,17 @@ interface ChatBubbleProps {
   onReply: (message: ChatMessage) => void;
   onDelete: (messageId: string) => void;
   onReact: (messageId: string, emoji: string) => void;
+  onEdit: (message: ChatMessage) => void;
+  onResolve: (messageId: string, resolved: boolean) => void;
+  onScrollToMessage?: (messageId: string) => void;
   isFirstInGroup: boolean;
   isLastInGroup: boolean;
   showTimestamp: boolean;
 }
 
-function getDisplayText(text: string): string {
-  if (text.startsWith('#idea ')) return text.slice(6);
-  if (text.startsWith('#bug ')) return text.slice(5);
-  return text;
+function getDisplayText(text: string, tag: ChatTag | null): string {
+  if (!tag) return text;
+  return text.replace(/#(?:idea|bug)\b/gi, '').trim();
 }
 
 function formatTime(timestamp: ChatMessage['timestamp']): string {
@@ -118,13 +120,17 @@ export function ChatBubble({
   onReply,
   onDelete,
   onReact,
+  onEdit,
+  onResolve,
+  onScrollToMessage,
   isFirstInGroup,
   isLastInGroup,
   showTimestamp,
 }: ChatBubbleProps) {
+  const { colors } = useTheme();
   const [showMenu, setShowMenu] = useState(false);
   const translateX = useSharedValue(0);
-  const displayText = getDisplayText(message.text);
+  const displayText = getDisplayText(message.text, message.tag);
 
   // --- Swipe-to-reply gesture ---
   const triggerReply = () => {
@@ -196,32 +202,28 @@ export function ChatBubble({
               <View
                 style={[
                   styles.bubble,
-                  isMe ? styles.bubbleMe : styles.bubblePartner,
+                  { backgroundColor: isMe ? colors.chatBubbleMe : colors.chatBubblePartner },
                   bubbleRadii,
+                  message.resolved && styles.bubbleResolved,
                 ]}
               >
-                {/* Sender name + tag inline for partner; tag only for me */}
-                {((!isMe && isFirstInGroup) || message.tag) && (
+                {/* Sender name + tag for partner; tag only inline for own messages */}
+                {!isMe && (isFirstInGroup || message.tag) && (
                   <View style={styles.nameTagRow}>
-                    {!isMe && isFirstInGroup && (
-                      <Text style={styles.senderName}>{senderName}</Text>
+                    {isFirstInGroup && (
+                      <Text style={[styles.senderName, { color: colors.textSecondary }]}>{senderName}</Text>
                     )}
                     {message.tag && (
                       <View
                         style={[
                           styles.tagPill,
-                          message.tag === 'idea' ? styles.tagIdea : styles.tagBug,
+                          { backgroundColor: message.tag === 'idea' ? colors.chatTagIdeaBg : colors.chatTagBugBg },
                         ]}
                       >
-                        <Ionicons
-                          name={message.tag === 'idea' ? 'bulb-outline' : 'bug-outline'}
-                          size={12}
-                          color={message.tag === 'idea' ? '#2563EB' : '#DC2626'}
-                        />
                         <Text
                           style={[
                             styles.tagText,
-                            message.tag === 'idea' ? styles.tagTextIdea : styles.tagTextBug,
+                            { color: message.tag === 'idea' ? colors.chatTagIdeaText : colors.chatTagBugText },
                           ]}
                         >
                           {message.tag === 'idea' ? 'Idea' : 'Bug'}
@@ -233,15 +235,18 @@ export function ChatBubble({
 
                 {/* Reply preview */}
                 {message.replyTo && (
-                  <View
+                  <TouchableOpacity
+                    activeOpacity={0.7}
+                    onPress={() => onScrollToMessage?.(message.replyTo!.id)}
                     style={[
                       styles.replyPreview,
-                      isMe ? styles.replyPreviewMe : styles.replyPreviewPartner,
+                      isMe ? styles.replyPreviewMe : { borderLeftColor: colors.textTertiary, backgroundColor: '#E5E7EB' },
                     ]}
                   >
                     <Text
                       style={[
                         styles.replyPreviewSender,
+                        { color: colors.textSecondary },
                         isMe && styles.replyPreviewSenderMe,
                       ]}
                     >
@@ -250,23 +255,51 @@ export function ChatBubble({
                     <Text
                       style={[
                         styles.replyPreviewText,
+                        { color: colors.textTertiary },
                         isMe && styles.replyPreviewTextMe,
                       ]}
                       numberOfLines={2}
                     >
                       {truncateText(message.replyTo.text, 60)}
                     </Text>
-                  </View>
+                  </TouchableOpacity>
                 )}
 
-                <Text style={[styles.messageText, isMe && styles.messageTextMe]}>
-                  {displayText}
-                </Text>
+                {/* Message text — own messages get inline tag, partner tag is on name row */}
+                <View style={isMe && message.tag ? styles.messageRow : undefined}>
+                  {isMe && message.tag && (
+                    <View
+                      style={[
+                        styles.tagPill,
+                        { backgroundColor: message.tag === 'idea' ? colors.chatTagIdeaBg : colors.chatTagBugBg },
+                      ]}
+                    >
+                      <Text
+                        style={[
+                          styles.tagText,
+                          { color: message.tag === 'idea' ? colors.chatTagIdeaText : colors.chatTagBugText },
+                        ]}
+                      >
+                        {message.tag === 'idea' ? 'Idea' : 'Bug'}
+                      </Text>
+                    </View>
+                  )}
+                  <Text style={[styles.messageText, { color: isMe ? colors.chatTextMe : colors.chatTextPartner }]}>
+                    {displayText}
+                  </Text>
+                </View>
 
                 {showTimestamp && (
                   <Text style={[styles.timestamp, isMe && styles.timestampMe]}>
                     {formatTime(message.timestamp)}
                   </Text>
+                )}
+
+                {message.resolved && (
+                  <View style={styles.resolvedBadge}>
+                    <Ionicons name="checkmark-circle" size={12} color="#16A34A" />
+                    <Text style={styles.resolvedText}>Done</Text>
+                  </View>
                 )}
               </View>
             </Pressable>
@@ -286,14 +319,15 @@ export function ChatBubble({
                       key={emoji}
                       style={[
                         styles.reactionChip,
-                        iReacted && styles.reactionChipActive,
+                        { backgroundColor: colors.background, borderColor: colors.border },
+                        iReacted && { borderColor: colors.water, backgroundColor: colors.chatReactionActive },
                       ]}
                       onPress={() => onReact(message.id, emoji)}
                       activeOpacity={0.6}
                     >
                       <Text style={styles.reactionEmoji}>{emoji}</Text>
                       {count > 1 && (
-                        <Text style={styles.reactionCount}>{count}</Text>
+                        <Text style={[styles.reactionCount, { color: colors.textSecondary }]}>{count}</Text>
                       )}
                     </TouchableOpacity>
                   );
@@ -312,13 +346,16 @@ export function ChatBubble({
         onRequestClose={() => setShowMenu(false)}
       >
         <Pressable style={styles.modalBackdrop} onPress={() => setShowMenu(false)}>
-          <Pressable style={styles.modalMenu} onPress={(e) => e.stopPropagation()}>
+          <Pressable
+            style={[styles.modalMenu, { backgroundColor: colors.surface }]}
+            onPress={(e) => e.stopPropagation()}
+          >
             {/* Quick emoji row */}
             <View style={styles.emojiRow}>
               {QUICK_EMOJIS.map((emoji) => (
                 <TouchableOpacity
                   key={emoji}
-                  style={styles.emojiButton}
+                  style={[styles.emojiButton, { backgroundColor: colors.background }]}
                   onPress={() => {
                     onReact(message.id, emoji);
                     setShowMenu(false);
@@ -331,7 +368,7 @@ export function ChatBubble({
             </View>
 
             {/* Action buttons */}
-            <View style={styles.menuActions}>
+            <View style={[styles.menuActions, { borderTopColor: colors.border }]}>
               <TouchableOpacity
                 style={styles.menuAction}
                 onPress={() => {
@@ -341,8 +378,22 @@ export function ChatBubble({
                 activeOpacity={0.6}
               >
                 <Ionicons name="arrow-undo-outline" size={16} color={colors.textPrimary} />
-                <Text style={styles.menuActionText}>Reply</Text>
+                <Text style={[styles.menuActionText, { color: colors.textPrimary }]}>Reply</Text>
               </TouchableOpacity>
+
+              {isMe && (
+                <TouchableOpacity
+                  style={styles.menuAction}
+                  onPress={() => {
+                    onEdit(message);
+                    setShowMenu(false);
+                  }}
+                  activeOpacity={0.6}
+                >
+                  <Ionicons name="pencil-outline" size={16} color={colors.textPrimary} />
+                  <Text style={[styles.menuActionText, { color: colors.textPrimary }]}>Edit</Text>
+                </TouchableOpacity>
+              )}
 
               {isMe && (
                 <TouchableOpacity
@@ -356,6 +407,31 @@ export function ChatBubble({
                   <Ionicons name="trash-outline" size={16} color={colors.error} />
                   <Text style={[styles.menuActionText, { color: colors.error }]}>
                     Delete
+                  </Text>
+                </TouchableOpacity>
+              )}
+
+              {message.tag && (
+                <TouchableOpacity
+                  style={styles.menuAction}
+                  onPress={() => {
+                    onResolve(message.id, !message.resolved);
+                    setShowMenu(false);
+                  }}
+                  activeOpacity={0.6}
+                >
+                  <Ionicons
+                    name={message.resolved ? 'arrow-undo-outline' : 'checkmark-circle-outline'}
+                    size={16}
+                    color={message.resolved ? colors.textSecondary : '#16A34A'}
+                  />
+                  <Text
+                    style={[
+                      styles.menuActionText,
+                      { color: message.resolved ? colors.textSecondary : '#16A34A' },
+                    ]}
+                  >
+                    {message.resolved ? 'Reopen' : 'Mark Done'}
                   </Text>
                 </TouchableOpacity>
               )}
@@ -401,14 +477,15 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
   },
-  bubbleMe: {
-    backgroundColor: '#3B82F6',
-  },
-  bubblePartner: {
-    backgroundColor: '#F3F4F6',
-  },
 
-  // Name + tag inline row
+  // Inline message row (tag + text on same line, for own messages)
+  messageRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    alignItems: 'center',
+    gap: 4,
+  },
+  // Name + tag row for partner messages
   nameTagRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -418,7 +495,7 @@ const styles = StyleSheet.create({
   senderName: {
     ...typography.xs,
     fontWeight: fontWeights.semibold,
-    color: colors.textSecondary,
+    marginBottom: 2,
   },
 
   // Reply preview inside bubble
@@ -433,68 +510,59 @@ const styles = StyleSheet.create({
     borderLeftColor: 'rgba(255,255,255,0.4)',
     backgroundColor: 'rgba(255,255,255,0.15)',
   },
-  replyPreviewPartner: {
-    borderLeftColor: colors.textTertiary,
-    backgroundColor: '#E5E7EB',
-  },
   replyPreviewSender: {
     ...typography.xs,
     fontWeight: fontWeights.semibold,
-    color: colors.textSecondary,
   },
   replyPreviewSenderMe: {
     color: 'rgba(255,255,255,0.8)',
   },
   replyPreviewText: {
     ...typography.xs,
-    color: colors.textTertiary,
     marginTop: 1,
   },
   replyPreviewTextMe: {
     color: 'rgba(255,255,255,0.6)',
   },
 
-  // Tag pill
+  // Tag pill (compact inline badge)
   tagPill: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: 2,
-    borderRadius: borderRadius.sm,
-  },
-  tagIdea: {
-    backgroundColor: '#DBEAFE',
-  },
-  tagBug: {
-    backgroundColor: '#FEE2E2',
+    paddingHorizontal: 5,
+    paddingVertical: 1,
+    borderRadius: 4,
   },
   tagText: {
-    ...typography.xs,
+    fontSize: 9,
     fontWeight: fontWeights.semibold,
-  },
-  tagTextIdea: {
-    color: '#2563EB',
-  },
-  tagTextBug: {
-    color: '#DC2626',
   },
 
   // Message text
   messageText: {
     ...typography.sm,
-    color: colors.textPrimary,
-  },
-  messageTextMe: {
-    color: '#FFFFFF',
   },
   timestamp: {
     ...typography.xs,
-    color: colors.textTertiary,
+    color: 'rgba(0,0,0,0.4)',
     marginTop: 4,
   },
   timestampMe: {
     color: 'rgba(255,255,255,0.6)',
+  },
+  resolvedBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+    marginTop: 4,
+  },
+  resolvedText: {
+    fontSize: 10,
+    fontWeight: '600',
+    color: '#16A34A',
+  },
+  bubbleResolved: {
+    opacity: 0.6,
   },
 
   // Modal context menu
@@ -505,7 +573,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   modalMenu: {
-    backgroundColor: colors.surface,
     borderRadius: borderRadius.md,
     paddingVertical: spacing.md,
     paddingHorizontal: spacing.md,
@@ -526,7 +593,6 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: colors.background,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -535,7 +601,6 @@ const styles = StyleSheet.create({
   },
   menuActions: {
     borderTopWidth: 1,
-    borderTopColor: colors.border,
     paddingTop: spacing.sm,
     gap: spacing.xs,
   },
@@ -550,7 +615,6 @@ const styles = StyleSheet.create({
   menuActionText: {
     ...typography.sm,
     fontWeight: fontWeights.medium,
-    color: colors.textPrimary,
   },
 
   // Reaction chips
@@ -569,17 +633,11 @@ const styles = StyleSheet.create({
   reactionChip: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.background,
     borderRadius: 12,
     paddingHorizontal: spacing.sm,
     paddingVertical: 2,
     borderWidth: 1,
-    borderColor: colors.border,
     gap: 2,
-  },
-  reactionChipActive: {
-    borderColor: colors.water,
-    backgroundColor: '#EBF5FB',
   },
   reactionEmoji: {
     fontSize: 14,
@@ -587,6 +645,5 @@ const styles = StyleSheet.create({
   reactionCount: {
     ...typography.xs,
     fontWeight: fontWeights.medium,
-    color: colors.textSecondary,
   },
 });

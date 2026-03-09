@@ -1,10 +1,12 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
-import { ChatMessage, ChatTag } from '../types/chat';
+import { ChatMessage, ChatFilter } from '../types/chat';
 import { FeedInteraction } from '../types/habit';
 import {
   subscribeToMessages,
   sendMessage as sendChatMessage,
   deleteMessage as deleteChatMessage,
+  editMessage as editChatMessage,
+  resolveMessage as resolveChatMessage,
   addChatReaction,
   removeChatReaction,
   subscribeToChatReactions,
@@ -18,9 +20,10 @@ export function useChat() {
   const { user, profile, partnerProfile } = useAuthStore();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [reactions, setReactions] = useState<Record<string, FeedInteraction>>({});
-  const [filter, setFilter] = useState<ChatTag | null>(null);
+  const [filter, setFilter] = useState<ChatFilter | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [replyTo, setReplyTo] = useState<ChatMessage | null>(null);
+  const [editingMessage, setEditingMessage] = useState<ChatMessage | null>(null);
   const reactionsUnsubRef = useRef<(() => void) | null>(null);
 
   const userId = user?.uid;
@@ -102,8 +105,28 @@ export function useChat() {
     [userId, reactions]
   );
 
+  const editMessage = useCallback(
+    async (messageId: string, newText: string) => {
+      if (!newText.trim()) return;
+      await editChatMessage(messageId, newText.trim());
+      setEditingMessage(null);
+    },
+    []
+  );
+
+  const resolveMessage = useCallback(
+    async (messageId: string, resolved: boolean) => {
+      await resolveChatMessage(messageId, resolved);
+    },
+    []
+  );
+
   const clearReplyTo = useCallback(() => {
     setReplyTo(null);
+  }, []);
+
+  const clearEditing = useCallback(() => {
+    setEditingMessage(null);
   }, []);
 
   return {
@@ -112,11 +135,16 @@ export function useChat() {
     filter,
     setFilter,
     sendMessage,
+    editMessage,
     deleteMessage,
+    resolveMessage,
     toggleReaction,
     replyTo,
     setReplyTo,
     clearReplyTo,
+    editingMessage,
+    setEditingMessage,
+    clearEditing,
     isLoading,
     currentUserId: userId || '',
     myName,

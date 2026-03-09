@@ -10,7 +10,7 @@ import Animated, {
 import * as Haptics from 'expo-haptics';
 import { HabitDefinition, WorkoutHabitData } from '../../types/habit';
 import { HabitIcon } from './HabitIcon';
-import { colors, typography, fontWeights, spacing, borderRadius } from '../../theme';
+import { useTheme, typography, fontWeights, spacing, borderRadius } from '../../theme';
 
 interface WorkoutHabitCardProps {
   definition: HabitDefinition;
@@ -22,6 +22,7 @@ interface WorkoutHabitCardProps {
 const HOLD_DURATION = 500;
 
 export function WorkoutHabitCard({ definition, data, onToggle, onSaveNote }: WorkoutHabitCardProps) {
+  const { colors } = useTheme();
   const completed = data?.completed ?? false;
   const fillProgress = useSharedValue(0);
   const cardScale = useSharedValue(1);
@@ -109,6 +110,7 @@ export function WorkoutHabitCard({ definition, data, onToggle, onSaveNote }: Wor
         <Animated.View
           style={[
             styles.card,
+            { backgroundColor: colors.surface, borderColor: colors.border },
             completed && styles.cardCompleted,
             cardAnimStyle,
           ]}
@@ -131,12 +133,13 @@ export function WorkoutHabitCard({ definition, data, onToggle, onSaveNote }: Wor
               <Text
                 style={[
                   styles.label,
-                  completed && styles.labelCompleted,
+                  { color: colors.textPrimary },
+                  completed && [styles.labelCompleted, { color: colors.textTertiary }],
                 ]}
               >
                 {definition.label}
               </Text>
-              <Text style={styles.description}>{definition.description}</Text>
+              <Text style={[styles.description, { color: colors.textTertiary }]}>{definition.description}</Text>
             </View>
             {completed && (
               <View
@@ -145,13 +148,13 @@ export function WorkoutHabitCard({ definition, data, onToggle, onSaveNote }: Wor
                   { backgroundColor: definition.color },
                 ]}
               >
-                <HabitIcon name="checkmark" size={16} color="#fff" />
+                <HabitIcon name="checkmark" size={16} color={colors.textOnPrimary} />
               </View>
             )}
           </View>
           {completed && data?.note ? (
             <View style={styles.notePreview}>
-              <Text style={styles.notePreviewText} numberOfLines={1}>
+              <Text style={[styles.notePreviewText, { color: colors.textSecondary }]} numberOfLines={1}>
                 {data.note}
               </Text>
             </View>
@@ -170,10 +173,10 @@ export function WorkoutHabitCard({ definition, data, onToggle, onSaveNote }: Wor
           style={styles.modalOverlay}
         >
           <Pressable style={styles.modalBackdrop} onPress={handleSkipNote} />
-          <View style={styles.modalCard}>
-            <Text style={styles.modalTitle}>What did you do?</Text>
+          <View style={[styles.modalCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+            <Text style={[styles.modalTitle, { color: colors.textPrimary }]}>What did you do?</Text>
             <TextInput
-              style={styles.modalInput}
+              style={[styles.modalInput, { color: colors.textPrimary, borderColor: colors.border }]}
               value={noteText}
               onChangeText={setNoteText}
               placeholder="Ran 3 miles..."
@@ -184,14 +187,14 @@ export function WorkoutHabitCard({ definition, data, onToggle, onSaveNote }: Wor
               onSubmitEditing={handleSubmitNote}
             />
             <View style={styles.modalButtons}>
-              <Pressable style={styles.skipButton} onPress={handleSkipNote}>
-                <Text style={styles.skipButtonText}>Skip</Text>
+              <Pressable style={[styles.skipButton, { backgroundColor: colors.background }]} onPress={handleSkipNote}>
+                <Text style={[styles.skipButtonText, { color: colors.textSecondary }]}>Skip</Text>
               </Pressable>
               <Pressable
                 style={[styles.doneButton, { backgroundColor: definition.color }]}
                 onPress={handleSubmitNote}
               >
-                <Text style={styles.doneButtonText}>Done</Text>
+                <Text style={[styles.doneButtonText, { color: colors.textOnPrimary }]}>Done</Text>
               </Pressable>
             </View>
           </View>
@@ -203,11 +206,9 @@ export function WorkoutHabitCard({ definition, data, onToggle, onSaveNote }: Wor
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: colors.surface,
     borderRadius: borderRadius.md,
     padding: spacing.lg,
     borderWidth: 1,
-    borderColor: colors.border,
     overflow: 'hidden',
     position: 'relative',
   },
@@ -239,15 +240,12 @@ const styles = StyleSheet.create({
   label: {
     ...typography.base,
     fontWeight: fontWeights.semibold,
-    color: colors.textPrimary,
   },
   labelCompleted: {
     textDecorationLine: 'line-through',
-    color: colors.textTertiary,
   },
   description: {
     ...typography.sm,
-    color: colors.textTertiary,
     marginTop: 2,
   },
   checkmark: {
@@ -264,7 +262,6 @@ const styles = StyleSheet.create({
   },
   notePreviewText: {
     ...typography.sm,
-    color: colors.textSecondary,
     fontStyle: 'italic',
   },
   modalOverlay: {
@@ -275,25 +272,20 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   modalCard: {
-    backgroundColor: colors.surface,
     borderTopLeftRadius: borderRadius.lg,
     borderTopRightRadius: borderRadius.lg,
     padding: spacing.xl,
     paddingBottom: spacing.xxl,
     borderTopWidth: 1,
-    borderColor: colors.border,
   },
   modalTitle: {
     ...typography.lg,
     fontWeight: fontWeights.semibold,
-    color: colors.textPrimary,
     marginBottom: spacing.md,
   },
   modalInput: {
     ...typography.base,
-    color: colors.textPrimary,
     borderWidth: 1,
-    borderColor: colors.border,
     borderRadius: borderRadius.sm,
     padding: spacing.md,
     marginBottom: spacing.lg,
@@ -306,13 +298,11 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingVertical: spacing.md,
     borderRadius: borderRadius.sm,
-    backgroundColor: colors.background,
     alignItems: 'center',
   },
   skipButtonText: {
     ...typography.base,
     fontWeight: fontWeights.medium,
-    color: colors.textSecondary,
   },
   doneButton: {
     flex: 1,
@@ -323,6 +313,5 @@ const styles = StyleSheet.create({
   doneButtonText: {
     ...typography.base,
     fontWeight: fontWeights.semibold,
-    color: '#FFFFFF',
   },
 });

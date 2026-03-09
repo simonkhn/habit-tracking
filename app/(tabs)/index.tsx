@@ -13,9 +13,10 @@ import { usePartnerHabits } from '../../src/hooks/usePartnerHabits';
 import { useAuthStore } from '../../src/stores/authStore';
 import { HABIT_ORDER, CHALLENGE_TOTAL_DAYS } from '../../src/config/habits';
 import { getDayNumber, formatDateHeader, getHabitDateString } from '../../src/utils/dates';
-import { colors, typography, fontWeights, spacing, borderRadius } from '../../src/theme';
+import { useTheme, typography, fontWeights, spacing, borderRadius } from '../../src/theme';
 
 export default function TodayScreen() {
+  const { colors } = useTheme();
   const { profile, partnerProfile } = useAuthStore();
   const {
     habits,
@@ -63,13 +64,13 @@ export default function TodayScreen() {
       {/* Header */}
       <View style={styles.header}>
         <View style={styles.headerLeft}>
-          <View style={styles.dayBadge}>
-            <Text style={styles.dayBadgeText}>Day {dayNumber}</Text>
+          <View style={[styles.dayBadge, { backgroundColor: colors.textPrimary }]}>
+            <Text style={[styles.dayBadgeText, { color: colors.textOnPrimary }]}>Day {dayNumber}</Text>
           </View>
-          <Text style={styles.dateText}>{today}</Text>
+          <Text style={[styles.dateText, { color: colors.textSecondary }]}>{today}</Text>
         </View>
-        <View style={styles.avatar}>
-          <Text style={styles.avatarText}>
+        <View style={[styles.avatar, { backgroundColor: colors.textPrimary }]}>
+          <Text style={[styles.avatarText, { color: colors.textOnPrimary }]}>
             {profile?.displayName?.charAt(0) ?? '?'}
           </Text>
         </View>
@@ -77,7 +78,7 @@ export default function TodayScreen() {
 
       {/* Progress bar */}
       <View style={styles.progressSection}>
-        <Text style={styles.progressText}>
+        <Text style={[styles.progressText, { color: colors.textSecondary }]}>
           {completedCount} of {HABIT_ORDER.length}
         </Text>
         <ProgressBar
@@ -106,7 +107,7 @@ export default function TodayScreen() {
       {/* Personal habits */}
       {personalHabits.length > 0 && (
         <View style={styles.personalSection}>
-          <Text style={styles.sectionLabel}>Personal</Text>
+          <Text style={[styles.sectionLabel, { color: colors.textTertiary }]}>Personal</Text>
           <View style={styles.habitList}>
             {personalHabits.map((habit) => (
               <View key={habit.id} style={styles.habitCardWrapper}>
@@ -159,7 +160,6 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   dayBadge: {
-    backgroundColor: colors.textPrimary,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.xs,
     borderRadius: borderRadius.sm,
@@ -169,24 +169,20 @@ const styles = StyleSheet.create({
   dayBadgeText: {
     ...typography.sm,
     fontWeight: fontWeights.bold,
-    color: '#FFFFFF',
   },
   dateText: {
     ...typography.sm,
-    color: colors.textSecondary,
   },
   avatar: {
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: colors.textPrimary,
     alignItems: 'center',
     justifyContent: 'center',
   },
   avatarText: {
     ...typography.md,
     fontWeight: fontWeights.bold,
-    color: '#FFFFFF',
   },
   progressSection: {
     marginBottom: spacing.xl,
@@ -194,7 +190,6 @@ const styles = StyleSheet.create({
   progressText: {
     ...typography.sm,
     fontWeight: fontWeights.medium,
-    color: colors.textSecondary,
     marginBottom: spacing.sm,
   },
   habitList: {
@@ -207,7 +202,6 @@ const styles = StyleSheet.create({
   sectionLabel: {
     ...typography.sm,
     fontWeight: fontWeights.semibold,
-    color: colors.textTertiary,
     textTransform: 'uppercase',
     letterSpacing: 1,
     marginBottom: spacing.md,

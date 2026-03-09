@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import Svg, { Circle } from 'react-native-svg';
-import { colors, typography, fontWeights, spacing } from '../../theme';
+import { useTheme, typography, fontWeights, spacing } from '../../theme';
 
 interface CompletionRateChartProps {
   rate: number; // 0-1
@@ -9,6 +9,7 @@ interface CompletionRateChartProps {
 }
 
 export function CompletionRateChart({ rate, size = 120 }: CompletionRateChartProps) {
+  const { colors } = useTheme();
   const strokeWidth = 10;
   const radius = (size - strokeWidth) / 2;
   const circumference = 2 * Math.PI * radius;
@@ -39,8 +40,8 @@ export function CompletionRateChart({ rate, size = 120 }: CompletionRateChartPro
         />
       </Svg>
       <View style={[styles.labelContainer, { width: size, height: size }]}>
-        <Text style={styles.percentage}>{Math.round(rate * 100)}%</Text>
-        <Text style={styles.subtitle}>overall</Text>
+        <Text style={[styles.percentage, { color: colors.textPrimary }]}>{Math.round(rate * 100)}%</Text>
+        <Text style={[styles.subtitle, { color: colors.textTertiary }]}>overall</Text>
       </View>
     </View>
   );
@@ -59,10 +60,8 @@ const styles = StyleSheet.create({
   percentage: {
     ...typography.xl,
     fontWeight: fontWeights.bold,
-    color: colors.textPrimary,
   },
   subtitle: {
     ...typography.xs,
-    color: colors.textTertiary,
   },
 });

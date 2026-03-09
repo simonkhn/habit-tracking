@@ -12,7 +12,7 @@ import * as Notifications from 'expo-notifications';
 import Svg, { Circle } from 'react-native-svg';
 import { PersonalHabitDefinition, HabitData } from '../../types/habit';
 import { HabitIcon } from './HabitIcon';
-import { colors, typography, fontWeights, spacing, borderRadius } from '../../theme';
+import { useTheme, typography, fontWeights, spacing, borderRadius } from '../../theme';
 
 interface TimedHabitCardProps {
   definition: PersonalHabitDefinition;
@@ -33,6 +33,7 @@ function formatTime(seconds: number): string {
 }
 
 export function TimedHabitCard({ definition, data, onToggle }: TimedHabitCardProps) {
+  const { colors } = useTheme();
   const completed = data?.completed ?? false;
   const duration = definition.durationSeconds ?? 300;
 
@@ -198,6 +199,7 @@ export function TimedHabitCard({ definition, data, onToggle }: TimedHabitCardPro
       <Animated.View
         style={[
           styles.card,
+          { backgroundColor: colors.surface, borderColor: colors.border },
           completed && styles.cardCompleted,
           cardAnimStyle,
         ]}
@@ -254,7 +256,8 @@ export function TimedHabitCard({ definition, data, onToggle }: TimedHabitCardPro
             <Text
               style={[
                 styles.label,
-                completed && styles.labelCompleted,
+                { color: colors.textPrimary },
+                completed && [styles.labelCompleted, { color: colors.textTertiary }],
               ]}
             >
               {definition.label}
@@ -264,7 +267,7 @@ export function TimedHabitCard({ definition, data, onToggle }: TimedHabitCardPro
                 {formatTime(remaining)}
               </Text>
             ) : (
-              <Text style={styles.description}>
+              <Text style={[styles.description, { color: colors.textTertiary }]}>
                 {completed ? 'Personal' : 'Tap for timer \u2022 Hold to complete'}
               </Text>
             )}
@@ -273,11 +276,11 @@ export function TimedHabitCard({ definition, data, onToggle }: TimedHabitCardPro
           {/* Right side */}
           {completed && (
             <>
-              <Text style={styles.undoLabel}>Undo</Text>
+              <Text style={[styles.undoLabel, { color: colors.textTertiary }]}>Undo</Text>
               <View
                 style={[styles.checkmark, { backgroundColor: definition.color }]}
               >
-                <HabitIcon name="checkmark" size={16} color="#fff" />
+                <HabitIcon name="checkmark" size={16} color={colors.textOnPrimary} />
               </View>
             </>
           )}
@@ -296,11 +299,9 @@ export function TimedHabitCard({ definition, data, onToggle }: TimedHabitCardPro
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: colors.surface,
     borderRadius: borderRadius.md,
     padding: spacing.lg,
     borderWidth: 1,
-    borderColor: colors.border,
     overflow: 'hidden',
     position: 'relative',
   },
@@ -347,15 +348,12 @@ const styles = StyleSheet.create({
   label: {
     ...typography.base,
     fontWeight: fontWeights.semibold,
-    color: colors.textPrimary,
   },
   labelCompleted: {
     textDecorationLine: 'line-through',
-    color: colors.textTertiary,
   },
   description: {
     ...typography.sm,
-    color: colors.textTertiary,
     marginTop: 2,
   },
   countdown: {
@@ -365,7 +363,6 @@ const styles = StyleSheet.create({
   },
   undoLabel: {
     ...typography.xs,
-    color: colors.textTertiary,
     marginRight: spacing.xs,
   },
   checkmark: {

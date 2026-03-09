@@ -14,6 +14,7 @@ export type HabitType = 'binary' | 'progressive' | 'binary-with-note';
 export interface HabitDefinition {
   id: HabitId;
   label: string;
+  shortLabel?: string;
   type: HabitType;
   color: string;
   icon: string;

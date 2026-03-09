@@ -3,7 +3,7 @@ import { View, Text, StyleSheet } from 'react-native';
 import { HabitId, DayHabits, WaterHabitData, ReadingHabitData, WorkoutHabitData } from '../../types/habit';
 import { getHabitDefinition } from '../../config/habits';
 import { HabitIcon } from '../habits/HabitIcon';
-import { colors, typography, fontWeights, spacing, borderRadius } from '../../theme';
+import { useTheme, typography, fontWeights, spacing, borderRadius } from '../../theme';
 
 interface PartnerHabitRowProps {
   habitId: HabitId;
@@ -12,6 +12,7 @@ interface PartnerHabitRowProps {
 }
 
 export function PartnerHabitRow({ habitId, habits, partnerWaterTarget }: PartnerHabitRowProps) {
+  const { colors } = useTheme();
   const definition = getHabitDefinition(habitId);
   const data = habits[habitId];
 
@@ -39,11 +40,11 @@ export function PartnerHabitRow({ habitId, habits, partnerWaterTarget }: Partner
       >
         <HabitIcon name={definition.icon} size={18} color={definition.color} />
       </View>
-      <Text style={[styles.label, data.completed && styles.labelCompleted]}>
+      <Text style={[styles.label, { color: colors.textPrimary }, data.completed && { textDecorationLine: 'line-through', color: colors.textTertiary }]}>
         {definition.label}
       </Text>
       {detail ? (
-        <Text style={styles.detail} numberOfLines={1}>
+        <Text style={[styles.detail, { color: colors.textSecondary }]} numberOfLines={1}>
           {detail}
         </Text>
       ) : null}
@@ -79,16 +80,10 @@ const styles = StyleSheet.create({
   label: {
     ...typography.sm,
     fontWeight: fontWeights.medium,
-    color: colors.textPrimary,
     flex: 1,
-  },
-  labelCompleted: {
-    textDecorationLine: 'line-through',
-    color: colors.textTertiary,
   },
   detail: {
     ...typography.xs,
-    color: colors.textSecondary,
     marginRight: spacing.sm,
     maxWidth: 120,
   },

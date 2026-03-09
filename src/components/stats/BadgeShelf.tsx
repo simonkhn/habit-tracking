@@ -3,7 +3,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import Svg, { Circle } from 'react-native-svg';
 import { EarnedBadge, BadgeId } from '../../types/stats';
 import { BADGE_DEFINITIONS } from '../../config/badges';
-import { colors, typography, fontWeights, spacing } from '../../theme';
+import { useTheme, typography, fontWeights, spacing } from '../../theme';
 
 interface BadgeShelfProps {
   earnedBadges: EarnedBadge[];
@@ -74,12 +74,13 @@ export function BadgeShelf({
   longestPairStreak,
   hasPerfectPairDay,
 }: BadgeShelfProps) {
+  const { colors } = useTheme();
   const earnedIds = new Set(earnedBadges.map((b) => b.id));
   const progressProps = { dayNumber, bestHabitStreak, pairStreak, longestPairStreak, hasPerfectPairDay };
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Badges</Text>
+    <View>
+      <Text style={[styles.title, { color: colors.textPrimary }]}>Badges</Text>
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
@@ -99,7 +100,6 @@ export function BadgeShelf({
                     height={RING_SIZE}
                     style={styles.progressRing}
                   >
-                    {/* Background track */}
                     <Circle
                       cx={RING_SIZE / 2}
                       cy={RING_SIZE / 2}
@@ -108,7 +108,6 @@ export function BadgeShelf({
                       strokeWidth={RING_STROKE}
                       fill="none"
                     />
-                    {/* Progress arc */}
                     {progress > 0 && (
                       <Circle
                         cx={RING_SIZE / 2}
@@ -142,15 +141,13 @@ export function BadgeShelf({
                   />
                 </View>
 
-                {/* Checkmark overlay for earned badges */}
                 {earned && (
-                  <View style={styles.checkmarkBadge}>
-                    <Ionicons name="checkmark" size={10} color="#FFFFFF" />
+                  <View style={[styles.checkmarkBadge, { backgroundColor: colors.badgeEarnedBg, borderColor: colors.background }]}>
+                    <Ionicons name="checkmark" size={10} color={colors.badgeCheckmark} />
                   </View>
                 )}
               </View>
 
-              {/* Label */}
               <Text
                 style={[
                   styles.label,
@@ -163,9 +160,8 @@ export function BadgeShelf({
                 {def.label}
               </Text>
 
-              {/* Progress fraction for unearned badges */}
               {!earned && (
-                <Text style={styles.progressText}>
+                <Text style={[styles.progressText, { color: colors.textTertiary }]}>
                   {current}/{target}
                 </Text>
               )}
@@ -178,11 +174,9 @@ export function BadgeShelf({
 }
 
 const styles = StyleSheet.create({
-  container: {},
   title: {
     ...typography.base,
     fontWeight: fontWeights.semibold,
-    color: colors.textPrimary,
     marginBottom: spacing.md,
   },
   badgeItem: {
@@ -213,11 +207,9 @@ const styles = StyleSheet.create({
     width: CHECKMARK_SIZE,
     height: CHECKMARK_SIZE,
     borderRadius: CHECKMARK_SIZE / 2,
-    backgroundColor: '#27AE60',
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1.5,
-    borderColor: colors.background,
   },
   label: {
     ...typography.xs,
@@ -228,7 +220,6 @@ const styles = StyleSheet.create({
   progressText: {
     ...typography.xs,
     fontSize: 10,
-    color: colors.textTertiary,
     textAlign: 'center',
     marginTop: 2,
   },

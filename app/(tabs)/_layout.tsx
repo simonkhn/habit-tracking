@@ -1,10 +1,11 @@
 import { Tabs } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { colors, typography } from '../../src/theme';
+import { useTheme, typography } from '../../src/theme';
 
 export default function TabsLayout() {
   const insets = useSafeAreaInsets();
+  const { colors } = useTheme();
 
   return (
     <Tabs
@@ -47,6 +48,7 @@ export default function TabsLayout() {
         name="chat"
         options={{
           title: 'Chat',
+          tabBarHideOnKeyboard: true,
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="chatbox-outline" size={size} color={color} />
           ),

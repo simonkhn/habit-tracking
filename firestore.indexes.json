@@ -15,6 +15,14 @@
         { "fieldPath": "tag", "order": "ASCENDING" },
         { "fieldPath": "timestamp", "order": "DESCENDING" }
       ]
+    },
+    {
+      "collectionGroup": "chatMessages",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "resolved", "order": "ASCENDING" },
+        { "fieldPath": "timestamp", "order": "DESCENDING" }
+      ]
     }
   ],
   "fieldOverrides": []

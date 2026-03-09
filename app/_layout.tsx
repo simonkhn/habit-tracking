@@ -1,18 +1,23 @@
-import React, { useEffect } from 'react';
+import React from 'react';
 import { ActivityIndicator, View, StyleSheet } from 'react-native';
 import { Slot, useRouter, useSegments } from 'expo-router';
+import { StatusBar } from 'expo-status-bar';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { KeyboardProvider } from 'react-native-keyboard-controller';
+import { ThemeProvider as NavThemeProvider, DefaultTheme, DarkTheme } from '@react-navigation/native';
 import { useAuth } from '../src/hooks/useAuth';
 import { useNotifications } from '../src/hooks/useNotifications';
 import { useAuthStore } from '../src/stores/authStore';
-import { colors } from '../src/theme';
+import { useThemeStore } from '../src/stores/themeStore';
+import { ThemeProvider, useTheme } from '../src/theme';
 
 function AuthGate() {
   const router = useRouter();
   const segments = useSegments();
   const { user, isLoading } = useAuthStore();
+  const { colors } = useTheme();
 
-  useEffect(() => {
+  React.useEffect(() => {
     if (isLoading) return;
 
     const inAuthGroup = segments[0] === '(auth)';
@@ -26,7 +31,7 @@ function AuthGate() {
 
   if (isLoading) {
     return (
-      <View style={styles.loading}>
+      <View style={[styles.loading, { backgroundColor: colors.background }]}>
         <ActivityIndicator size="large" color={colors.textPrimary} />
       </View>
     );
@@ -35,14 +40,49 @@ function AuthGate() {
   return <Slot />;
 }
 
-export default function RootLayout() {
+function AppContent() {
+  const { colors, isDark } = useTheme();
+
   useAuth();
   useNotifications();
 
+  const navTheme = React.useMemo(
+    () => ({
+      ...(isDark ? DarkTheme : DefaultTheme),
+      colors: {
+        ...(isDark ? DarkTheme : DefaultTheme).colors,
+        background: colors.background,
+        card: colors.surface,
+        text: colors.textPrimary,
+        border: colors.border,
+        primary: colors.accent,
+        notification: colors.error,
+      },
+    }),
+    [colors, isDark]
+  );
+
   return (
-    <GestureHandlerRootView style={styles.container}>
-      <AuthGate />
-    </GestureHandlerRootView>
+    <NavThemeProvider value={navTheme}>
+      <KeyboardProvider>
+        <GestureHandlerRootView style={styles.container}>
+          <StatusBar style={isDark ? 'light' : 'dark'} />
+          <AuthGate />
+        </GestureHandlerRootView>
+      </KeyboardProvider>
+    </NavThemeProvider>
+  );
+}
+
+export default function RootLayout() {
+  const isHydrated = useThemeStore((s) => s.isHydrated);
+
+  if (!isHydrated) return null;
+
+  return (
+    <ThemeProvider>
+      <AppContent />
+    </ThemeProvider>
   );
 }
 
@@ -54,6 +94,5 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: colors.background,
   },
 });
