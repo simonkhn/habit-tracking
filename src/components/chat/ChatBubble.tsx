@@ -30,15 +30,16 @@ interface ChatBubbleProps {
   onReply: (message: ChatMessage) => void;
   onDelete: (messageId: string) => void;
   onReact: (messageId: string, emoji: string) => void;
+  onEdit: (message: ChatMessage) => void;
+  onResolve: (messageId: string, resolved: boolean) => void;
+  onScrollToMessage?: (messageId: string) => void;
   isFirstInGroup: boolean;
   isLastInGroup: boolean;
   showTimestamp: boolean;
 }
 
 function getDisplayText(text: string): string {
-  if (text.startsWith('#idea ')) return text.slice(6);
-  if (text.startsWith('#bug ')) return text.slice(5);
-  return text;
+  return text.replace(/#(?:idea|bug)\b/gi, '').trim();
 }
 
 function formatTime(timestamp: ChatMessage['timestamp']): string {
@@ -118,6 +119,9 @@ export function ChatBubble({
   onReply,
   onDelete,
   onReact,
+  onEdit,
+  onResolve,
+  onScrollToMessage,
   isFirstInGroup,
   isLastInGroup,
   showTimestamp,
@@ -198,6 +202,7 @@ export function ChatBubble({
                   styles.bubble,
                   isMe ? styles.bubbleMe : styles.bubblePartner,
                   bubbleRadii,
+                  message.resolved && styles.bubbleResolved,
                 ]}
               >
                 {/* Sender name + tag for partner; tag only inline for own messages */}
@@ -228,7 +233,9 @@ export function ChatBubble({
 
                 {/* Reply preview */}
                 {message.replyTo && (
-                  <View
+                  <TouchableOpacity
+                    activeOpacity={0.7}
+                    onPress={() => onScrollToMessage?.(message.replyTo!.id)}
                     style={[
                       styles.replyPreview,
                       isMe ? styles.replyPreviewMe : styles.replyPreviewPartner,
@@ -251,7 +258,7 @@ export function ChatBubble({
                     >
                       {truncateText(message.replyTo.text, 60)}
                     </Text>
-                  </View>
+                  </TouchableOpacity>
                 )}
 
                 {/* Message text — own messages get inline tag, partner tag is on name row */}
@@ -282,6 +289,13 @@ export function ChatBubble({
                   <Text style={[styles.timestamp, isMe && styles.timestampMe]}>
                     {formatTime(message.timestamp)}
                   </Text>
+                )}
+
+                {message.resolved && (
+                  <View style={styles.resolvedBadge}>
+                    <Ionicons name="checkmark-circle" size={12} color="#16A34A" />
+                    <Text style={styles.resolvedText}>Done</Text>
+                  </View>
                 )}
               </View>
             </Pressable>
@@ -363,6 +377,20 @@ export function ChatBubble({
                 <TouchableOpacity
                   style={styles.menuAction}
                   onPress={() => {
+                    onEdit(message);
+                    setShowMenu(false);
+                  }}
+                  activeOpacity={0.6}
+                >
+                  <Ionicons name="pencil-outline" size={16} color={colors.textPrimary} />
+                  <Text style={styles.menuActionText}>Edit</Text>
+                </TouchableOpacity>
+              )}
+
+              {isMe && (
+                <TouchableOpacity
+                  style={styles.menuAction}
+                  onPress={() => {
                     onDelete(message.id);
                     setShowMenu(false);
                   }}
@@ -371,6 +399,31 @@ export function ChatBubble({
                   <Ionicons name="trash-outline" size={16} color={colors.error} />
                   <Text style={[styles.menuActionText, { color: colors.error }]}>
                     Delete
+                  </Text>
+                </TouchableOpacity>
+              )}
+
+              {message.tag && (
+                <TouchableOpacity
+                  style={styles.menuAction}
+                  onPress={() => {
+                    onResolve(message.id, !message.resolved);
+                    setShowMenu(false);
+                  }}
+                  activeOpacity={0.6}
+                >
+                  <Ionicons
+                    name={message.resolved ? 'arrow-undo-outline' : 'checkmark-circle-outline'}
+                    size={16}
+                    color={message.resolved ? colors.textSecondary : '#16A34A'}
+                  />
+                  <Text
+                    style={[
+                      styles.menuActionText,
+                      { color: message.resolved ? colors.textSecondary : '#16A34A' },
+                    ]}
+                  >
+                    {message.resolved ? 'Reopen' : 'Mark Done'}
                   </Text>
                 </TouchableOpacity>
               )}
@@ -517,6 +570,20 @@ const styles = StyleSheet.create({
   },
   timestampMe: {
     color: 'rgba(255,255,255,0.6)',
+  },
+  resolvedBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+    marginTop: 4,
+  },
+  resolvedText: {
+    fontSize: 10,
+    fontWeight: '600',
+    color: '#16A34A',
+  },
+  bubbleResolved: {
+    opacity: 0.6,
   },
 
   // Modal context menu

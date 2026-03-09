@@ -1,36 +1,47 @@
 import firestore from '@react-native-firebase/firestore';
-import { ChatMessage, ChatTag, ChatReplyTo } from '../types/chat';
+import { ChatMessage, ChatTag, ChatReplyTo, ChatFilter } from '../types/chat';
 import { FeedInteraction } from '../types/habit';
 
 const chatCollection = () => firestore().collection('chatMessages');
 const chatReactionsCollection = () => firestore().collection('chatReactions');
 
 function parseTag(text: string): ChatTag | null {
-  if (text.startsWith('#idea ')) return 'idea';
-  if (text.startsWith('#bug ')) return 'bug';
+  if (/#idea\b/i.test(text)) return 'idea';
+  if (/#bug\b/i.test(text)) return 'bug';
   return null;
 }
 
 export function subscribeToMessages(
-  tag: ChatTag | null,
+  filter: ChatFilter | null,
   messageLimit: number,
   onData: (messages: ChatMessage[]) => void
 ) {
   let query = chatCollection().orderBy('timestamp', 'desc').limit(messageLimit);
 
-  if (tag) {
+  if (filter === 'done') {
     query = chatCollection()
-      .where('tag', '==', tag)
+      .where('resolved', '==', true)
+      .orderBy('timestamp', 'desc')
+      .limit(messageLimit);
+  } else if (filter) {
+    query = chatCollection()
+      .where('tag', '==', filter)
       .orderBy('timestamp', 'desc')
       .limit(messageLimit);
   }
 
   return query.onSnapshot(
     (snapshot) => {
-      const messages: ChatMessage[] = snapshot.docs.map((doc) => ({
+      let messages: ChatMessage[] = snapshot.docs.map((doc) => ({
         id: doc.id,
         ...doc.data(),
       })) as ChatMessage[];
+
+      // For idea/bug filters, hide resolved items
+      if (filter === 'idea' || filter === 'bug') {
+        messages = messages.filter((m) => !m.resolved);
+      }
+
       onData(messages);
     },
     (error) => {
@@ -51,10 +62,23 @@ export async function sendMessage(
     userId,
     text,
     tag,
+    resolved: false,
     timestamp: firestore.FieldValue.serverTimestamp(),
     replyTo: replyTo || null,
     imageUrl: null,
   });
+}
+
+export async function editMessage(messageId: string, newText: string) {
+  const tag = parseTag(newText);
+  await chatCollection().doc(messageId).update({
+    text: newText,
+    tag,
+  });
+}
+
+export async function resolveMessage(messageId: string, resolved: boolean) {
+  await chatCollection().doc(messageId).update({ resolved });
 }
 
 export async function deleteMessage(messageId: string) {

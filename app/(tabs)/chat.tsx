@@ -1,4 +1,4 @@
-import React, { useState, useRef, useMemo } from 'react';
+import React, { useState, useRef, useMemo, useCallback } from 'react';
 import {
   View,
   Text,
@@ -14,17 +14,18 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { Ionicons } from '@expo/vector-icons';
 import { useChat } from '../../src/hooks/useChat';
 import { ChatBubble } from '../../src/components/chat/ChatBubble';
-import { ChatMessage, ChatTag } from '../../src/types/chat';
+import { ChatMessage, ChatFilter } from '../../src/types/chat';
 import { colors, typography, fontWeights, spacing, borderRadius } from '../../src/theme';
 
 const ACCENT_BLUE = '#3B82F6';
 const TWO_MINUTES = 2 * 60 * 1000;
 const FIVE_MINUTES = 5 * 60 * 1000;
 
-const FILTERS: { label: string; value: ChatTag | null }[] = [
+const FILTERS: { label: string; value: ChatFilter | null }[] = [
   { label: 'All', value: null },
   { label: 'Ideas', value: 'idea' },
   { label: 'Bugs', value: 'bug' },
+  { label: 'Done', value: 'done' },
 ];
 
 // --- List item types ---
@@ -140,11 +141,16 @@ export default function ChatScreen() {
     filter,
     setFilter,
     sendMessage,
+    editMessage,
     deleteMessage,
+    resolveMessage,
     toggleReaction,
     replyTo,
     setReplyTo,
     clearReplyTo,
+    editingMessage,
+    setEditingMessage,
+    clearEditing,
     isLoading,
     currentUserId,
     myName,
@@ -154,8 +160,17 @@ export default function ChatScreen() {
 
   const handleSend = () => {
     if (!text.trim()) return;
-    sendMessage(text);
+    if (editingMessage) {
+      editMessage(editingMessage.id, text);
+    } else {
+      sendMessage(text);
+    }
     setText('');
+  };
+
+  const handleStartEdit = (message: ChatMessage) => {
+    setEditingMessage(message);
+    setText(message.text);
   };
 
   const getSenderName = (userId: string) =>
@@ -163,6 +178,15 @@ export default function ChatScreen() {
 
   // Build grouped list items with date separators
   const listItems = useMemo(() => buildListItems(messages), [messages]);
+
+  const scrollToMessage = useCallback((messageId: string) => {
+    const index = listItems.findIndex(
+      (item) => item.type === 'message' && item.data.id === messageId
+    );
+    if (index >= 0 && flatListRef.current) {
+      flatListRef.current.scrollToIndex({ index, animated: true, viewPosition: 0.5 });
+    }
+  }, [listItems]);
 
   const getItemKey = (item: ChatListItem) =>
     item.type === 'message' ? item.data.id : `sep-${item.date}`;
@@ -188,8 +212,11 @@ export default function ChatScreen() {
         reactions={reactions[item.data.id] || null}
         currentUserId={currentUserId}
         onReply={setReplyTo}
+        onEdit={handleStartEdit}
         onDelete={deleteMessage}
+        onResolve={resolveMessage}
         onReact={toggleReaction}
+        onScrollToMessage={scrollToMessage}
         isFirstInGroup={item.isFirstInGroup}
         isLastInGroup={item.isLastInGroup}
         showTimestamp={item.showTimestamp}
@@ -238,12 +265,20 @@ export default function ChatScreen() {
               inverted
               contentContainerStyle={styles.listContent}
               showsVerticalScrollIndicator={false}
+              onScrollToIndexFailed={(info) => {
+                flatListRef.current?.scrollToOffset({
+                  offset: info.averageItemLength * info.index,
+                  animated: true,
+                });
+              }}
               ListEmptyComponent={
                 <View style={styles.empty}>
                   <Text style={styles.emptyText}>
-                    {filter
-                      ? `No ${filter === 'idea' ? 'ideas' : 'bugs'} yet. Start a message with #${filter} to tag it.`
-                      : 'No messages yet. Say something!'}
+                    {filter === 'done'
+                      ? 'No completed items yet.'
+                      : filter
+                        ? `No open ${filter === 'idea' ? 'ideas' : 'bugs'} yet. Use #${filter} anywhere in a message to tag it.`
+                        : 'No messages yet. Say something!'}
                   </Text>
                 </View>
               }
@@ -272,11 +307,36 @@ export default function ChatScreen() {
             </View>
           )}
 
+          {/* Edit preview bar */}
+          {editingMessage && (
+            <View style={styles.replyBar}>
+              <View style={[styles.replyAccent, { backgroundColor: '#F59E0B' }]} />
+              <View style={styles.replyContent}>
+                <Text style={[styles.replyLabel, { color: '#F59E0B' }]}>
+                  Editing message
+                </Text>
+                <Text style={styles.replyText} numberOfLines={1}>
+                  {editingMessage.text}
+                </Text>
+              </View>
+              <TouchableOpacity
+                onPress={() => {
+                  clearEditing();
+                  setText('');
+                }}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                activeOpacity={0.6}
+              >
+                <Ionicons name="close" size={20} color={colors.textTertiary} />
+              </TouchableOpacity>
+            </View>
+          )}
+
           {/* Input bar */}
           <View style={styles.inputBar}>
             <TextInput
               style={styles.input}
-              placeholder="Message... (#idea or #bug to tag)"
+              placeholder="Message... (use #idea or #bug to tag)"
               placeholderTextColor={colors.textTertiary}
               value={text}
               onChangeText={setText}
