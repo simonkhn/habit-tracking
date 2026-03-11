@@ -1,18 +1,13 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { View, Text, StyleSheet, AppState } from 'react-native';
-import { Pressable } from 'react-native-gesture-handler';
-import Animated, {
-  useSharedValue,
-  useAnimatedStyle,
-  withTiming,
-  withSpring,
-} from 'react-native-reanimated';
+import { View, Text, StyleSheet, AppState, Pressable } from 'react-native';
+import Animated from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
 import * as Notifications from 'expo-notifications';
 import Svg, { Circle } from 'react-native-svg';
 import { PersonalHabitDefinition, HabitData } from '../../types/habit';
 import { HabitIcon } from './HabitIcon';
 import { useTheme, typography, fontWeights, spacing, borderRadius } from '../../theme';
+import { useHoldToComplete } from '../../hooks/useHoldToComplete';
 
 interface TimedHabitCardProps {
   definition: PersonalHabitDefinition;
@@ -24,7 +19,6 @@ const RING_SIZE = 48;
 const RING_RADIUS = 20;
 const RING_STROKE = 3;
 const CIRCUMFERENCE = 2 * Math.PI * RING_RADIUS;
-const HOLD_DURATION = 500;
 
 function formatTime(seconds: number): string {
   const m = Math.floor(seconds / 60);
@@ -42,8 +36,6 @@ export function TimedHabitCard({ definition, data, onToggle }: TimedHabitCardPro
   const startedAtRef = useRef<number | null>(null);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
   const notifIdRef = useRef<string | null>(null);
-  const cardScale = useSharedValue(1);
-  const fillProgress = useSharedValue(0);
 
   // Tick the timer
   const tick = useCallback(() => {
@@ -128,11 +120,8 @@ export function TimedHabitCard({ definition, data, onToggle }: TimedHabitCardPro
     }
   }, [completed, running, duration, tick, definition.label]);
 
-  // RNGH Pressable: onPress does NOT fire after onLongPress, so no guard needed
-  const handleLongPress = useCallback(() => {
-    if (completed) return;
-
-    // Clean up timer if it was running
+  // Hold-to-complete: clean up any running timer before toggling
+  const handleHoldComplete = useCallback(() => {
     if (intervalRef.current) {
       clearInterval(intervalRef.current);
       intervalRef.current = null;
@@ -143,58 +132,30 @@ export function TimedHabitCard({ definition, data, onToggle }: TimedHabitCardPro
       Notifications.cancelScheduledNotificationAsync(notifIdRef.current);
       notifIdRef.current = null;
     }
-
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     onToggle();
-    fillProgress.value = withTiming(0, { duration: 200 });
-    cardScale.value = withSpring(1);
-  }, [completed, onToggle]);
+  }, [onToggle]);
 
-  const handlePressIn = useCallback(() => {
-    if (completed) {
-      cardScale.value = withSpring(0.97);
-      return;
-    }
-    cardScale.value = withTiming(0.97, { duration: 100 });
-    fillProgress.value = withTiming(1, { duration: HOLD_DURATION });
-  }, [completed]);
-
-  const handlePressOut = useCallback(() => {
-    if (!completed) {
-      fillProgress.value = withTiming(0, { duration: 150 });
-    }
-    cardScale.value = withSpring(1);
-  }, [completed]);
+  const { fillStyle, cardAnimStyle, pressHandlers: holdPressHandlers } = useHoldToComplete({
+    completed,
+    onComplete: handleHoldComplete,
+    color: definition.color,
+  });
 
   const handlePress = useCallback(() => {
-    if (completed) {
-      // Undo
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-      onToggle();
-    } else if (!running) {
+    holdPressHandlers.onPress();
+    if (!completed && !running) {
       handleStart();
     }
-  }, [completed, running, handleStart, onToggle]);
-
-  const cardAnimStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: cardScale.value }],
-  }));
-
-  const fillStyle = useAnimatedStyle(() => ({
-    width: `${fillProgress.value * 100}%`,
-    backgroundColor: `${definition.color}26`,
-  }));
+  }, [completed, running, handleStart, holdPressHandlers]);
 
   const progress = running ? (duration - remaining) / duration : 0;
   const dashOffset = CIRCUMFERENCE * (1 - progress);
 
   return (
     <Pressable
+      onPressIn={holdPressHandlers.onPressIn}
+      onPressOut={holdPressHandlers.onPressOut}
       onPress={handlePress}
-      onPressIn={handlePressIn}
-      onPressOut={handlePressOut}
-      onLongPress={handleLongPress}
-      delayLongPress={HOLD_DURATION}
     >
       <Animated.View
         style={[
@@ -209,32 +170,34 @@ export function TimedHabitCard({ definition, data, onToggle }: TimedHabitCardPro
           {/* Icon with optional progress ring */}
           <View style={styles.iconWrapper}>
             {running ? (
-              <Svg width={RING_SIZE} height={RING_SIZE}>
-                <Circle
-                  cx={RING_SIZE / 2}
-                  cy={RING_SIZE / 2}
-                  r={RING_RADIUS}
-                  stroke={colors.border}
-                  strokeWidth={RING_STROKE}
-                  fill={`${definition.color}1A`}
-                />
-                <Circle
-                  cx={RING_SIZE / 2}
-                  cy={RING_SIZE / 2}
-                  r={RING_RADIUS}
-                  stroke={definition.color}
-                  strokeWidth={RING_STROKE}
-                  fill="none"
-                  strokeDasharray={`${CIRCUMFERENCE}`}
-                  strokeDashoffset={dashOffset}
-                  strokeLinecap="round"
-                  rotation={-90}
-                  origin={`${RING_SIZE / 2}, ${RING_SIZE / 2}`}
-                />
+              <View style={{ width: RING_SIZE, height: RING_SIZE }}>
+                <Svg width={RING_SIZE} height={RING_SIZE} style={StyleSheet.absoluteFill}>
+                  <Circle
+                    cx={RING_SIZE / 2}
+                    cy={RING_SIZE / 2}
+                    r={RING_RADIUS}
+                    stroke={colors.border}
+                    strokeWidth={RING_STROKE}
+                    fill={`${definition.color}1A`}
+                  />
+                  <Circle
+                    cx={RING_SIZE / 2}
+                    cy={RING_SIZE / 2}
+                    r={RING_RADIUS}
+                    stroke={definition.color}
+                    strokeWidth={RING_STROKE}
+                    fill="none"
+                    strokeDasharray={`${CIRCUMFERENCE}`}
+                    strokeDashoffset={dashOffset}
+                    strokeLinecap="round"
+                    rotation={-90}
+                    origin={`${RING_SIZE / 2}, ${RING_SIZE / 2}`}
+                  />
+                </Svg>
                 <View style={styles.iconOverRing}>
                   <HabitIcon name={definition.icon} size={20} color={definition.color} />
                 </View>
-              </Svg>
+              </View>
             ) : (
               <View
                 style={[

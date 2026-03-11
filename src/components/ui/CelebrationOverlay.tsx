@@ -26,14 +26,14 @@ export function CelebrationOverlay({ visible, onDismiss }: CelebrationOverlayPro
       opacity.value = withTiming(1, { duration: 300 });
       scale.value = withSpring(1, { damping: 8, stiffness: 100 });
 
-      // Auto dismiss after 3 seconds
-      const timer = setTimeout(onDismiss, 3000);
+      // Auto dismiss after 4 seconds (spring animation takes ~2.7s)
+      const timer = setTimeout(onDismiss, 4000);
       return () => clearTimeout(timer);
     } else {
       opacity.value = withTiming(0, { duration: 200 });
       scale.value = withTiming(0.5, { duration: 200 });
     }
-  }, [visible]);
+  }, [visible, onDismiss]);
 
   const overlayStyle = useAnimatedStyle(() => ({
     opacity: opacity.value,

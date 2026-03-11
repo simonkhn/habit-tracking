@@ -1,15 +1,9 @@
-import React, { useCallback, useRef } from 'react';
+import React from 'react';
 import { View, Text, StyleSheet, Pressable } from 'react-native';
-import Animated, {
-  useSharedValue,
-  useAnimatedStyle,
-  withTiming,
-  withSpring,
-  runOnJS,
-} from 'react-native-reanimated';
-import * as Haptics from 'expo-haptics';
+import Animated from 'react-native-reanimated';
 import { HabitDefinition, HabitData } from '../../types/habit';
 import { HabitIcon } from './HabitIcon';
+import { useHoldToComplete } from '../../hooks/useHoldToComplete';
 import { useTheme, typography, fontWeights, spacing, borderRadius } from '../../theme';
 
 interface BinaryHabitCardProps {
@@ -18,77 +12,18 @@ interface BinaryHabitCardProps {
   onToggle: () => void;
 }
 
-const HOLD_DURATION = 500;
-
 export function BinaryHabitCard({ definition, data, onToggle }: BinaryHabitCardProps) {
   const { colors } = useTheme();
   const completed = data?.completed ?? false;
-  const fillProgress = useSharedValue(0);
-  const cardScale = useSharedValue(1);
-  const holdTimer = useRef<NodeJS.Timeout | null>(null);
-  const isHolding = useRef(false);
-  const justCompleted = useRef(false);
 
-  const triggerComplete = useCallback(() => {
-    justCompleted.current = true;
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    onToggle();
-    fillProgress.value = withTiming(0, { duration: 200 });
-    cardScale.value = withSpring(1);
-  }, [onToggle]);
-
-  const handlePressIn = useCallback(() => {
-    if (completed) return;
-    isHolding.current = true;
-    cardScale.value = withTiming(0.97, { duration: 100 });
-    fillProgress.value = withTiming(1, { duration: HOLD_DURATION });
-
-    holdTimer.current = setTimeout(() => {
-      if (isHolding.current) {
-        runOnJS(triggerComplete)();
-      }
-    }, HOLD_DURATION);
-  }, [completed, triggerComplete]);
-
-  const handlePressOut = useCallback(() => {
-    isHolding.current = false;
-    if (holdTimer.current) {
-      clearTimeout(holdTimer.current);
-      holdTimer.current = null;
-    }
-    if (!completed) {
-      fillProgress.value = withTiming(0, { duration: 150 });
-    }
-    cardScale.value = withSpring(1);
-  }, [completed]);
-
-  const handleTap = useCallback(() => {
-    // Ignore tap right after hold-to-complete to prevent double-toggle
-    if (justCompleted.current) {
-      justCompleted.current = false;
-      return;
-    }
-    if (completed) {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-      onToggle();
-    }
-  }, [completed, onToggle]);
-
-  const fillStyle = useAnimatedStyle(() => ({
-    width: `${fillProgress.value * 100}%`,
-    backgroundColor: `${definition.color}26`, // 15% opacity
-  }));
-
-  const cardAnimStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: cardScale.value }],
-  }));
+  const { fillStyle, cardAnimStyle, pressHandlers } = useHoldToComplete({
+    completed,
+    onComplete: onToggle,
+    color: definition.color,
+  });
 
   return (
-    <Pressable
-      onPressIn={handlePressIn}
-      onPressOut={handlePressOut}
-      onPress={handleTap}
-    >
+    <Pressable {...pressHandlers}>
       <Animated.View
         style={[
           styles.card,

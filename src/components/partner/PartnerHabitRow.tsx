@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { HabitId, DayHabits, WaterHabitData, ReadingHabitData, WorkoutHabitData } from '../../types/habit';
-import { getHabitDefinition } from '../../config/habits';
+import { getHabitDefinition, READING_TARGET_PAGES } from '../../config/habits';
 import { HabitIcon } from '../habits/HabitIcon';
 import { useTheme, typography, fontWeights, spacing, borderRadius } from '../../theme';
 
@@ -22,7 +22,7 @@ export function PartnerHabitRow({ habitId, habits, partnerWaterTarget }: Partner
     detail = `${waterData.currentOz}/${partnerWaterTarget} oz`;
   } else if (habitId === 'reading') {
     const readingData = data as ReadingHabitData;
-    detail = `${readingData.pagesRead}/10 pages`;
+    detail = `${readingData.pagesRead}/${READING_TARGET_PAGES} pages`;
   } else if (habitId === 'workout' && data.completed) {
     const workoutData = data as WorkoutHabitData;
     if (workoutData.note) {

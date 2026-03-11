@@ -19,8 +19,6 @@ interface DualRingHeroProps {
   chunkNumber: number;
 }
 
-const HABIT_LABELS = ['Wake Up', 'Sunlight', 'Water', 'Journal', 'Read', 'Workout', 'Meditate'];
-
 const RING_SIZE = 110;
 const SVG_SIZE = RING_SIZE + 4; // extra padding to prevent clipping
 const STROKE_WIDTH = 8;
@@ -234,7 +232,7 @@ export function DualRingHero({
         <View style={styles.tooltipContainer}>
           <View style={[styles.tooltip, { backgroundColor: colors.textPrimary }]}>
             <Text style={[styles.tooltipText, { color: colors.textOnPrimary }]}>
-              {HABIT_LABELS[selectedHabit] ?? 'Habit'}
+              {HABIT_ORDER[selectedHabit] ? getHabitDefinition(HABIT_ORDER[selectedHabit]).shortLabel : 'Habit'}
             </Text>
           </View>
         </View>

@@ -41,6 +41,12 @@ export function useHabits() {
     return () => unsubscribe();
   }, [userId, date]);
 
+  useEffect(() => {
+    return () => {
+      Object.values(debounceTimers.current).forEach((t) => clearTimeout(t));
+    };
+  }, []);
+
   const habits: DayHabits = { ...createEmptyDayHabits(), ...log?.habits };
 
   // Keep a ref to latest habits so toggleBinaryHabit never reads stale data

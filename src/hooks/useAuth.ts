@@ -9,8 +9,17 @@ export function useAuth() {
     useAuthStore();
 
   useEffect(() => {
-    const unsubscribe = auth().onAuthStateChanged(async (firebaseUser) => {
+    let profileUnsub: (() => void) | null = null;
+    let partnerUnsub: (() => void) | null = null;
+
+    const unsubscribe = auth().onAuthStateChanged((firebaseUser) => {
       setUser(firebaseUser);
+
+      // Clean up previous listeners
+      if (profileUnsub) profileUnsub();
+      if (partnerUnsub) partnerUnsub();
+      profileUnsub = null;
+      partnerUnsub = null;
 
       if (!firebaseUser) {
         setProfile(null);
@@ -19,8 +28,9 @@ export function useAuth() {
         return;
       }
 
-      // Listen to user profile
-      const profileUnsub = firestore()
+      let currentPartnerId: string | null = null;
+
+      profileUnsub = firestore()
         .collection('users')
         .doc(firebaseUser.uid)
         .onSnapshot((snapshot) => {
@@ -28,26 +38,34 @@ export function useAuth() {
             const userProfile = snapshot.data() as UserProfile;
             setProfile(userProfile);
 
-            // If partner is set, listen to partner profile
-            if (userProfile.partnerId) {
-              firestore()
+            // Subscribe to partner profile (real-time)
+            if (userProfile.partnerId && userProfile.partnerId !== currentPartnerId) {
+              currentPartnerId = userProfile.partnerId;
+              if (partnerUnsub) partnerUnsub();
+              partnerUnsub = firestore()
                 .collection('users')
                 .doc(userProfile.partnerId)
-                .get()
-                .then((partnerDoc) => {
+                .onSnapshot((partnerDoc) => {
                   if (partnerDoc.exists()) {
                     setPartnerProfile(partnerDoc.data() as UserProfile);
                   }
                 });
+            } else if (!userProfile.partnerId) {
+              currentPartnerId = null;
+              if (partnerUnsub) partnerUnsub();
+              partnerUnsub = null;
+              setPartnerProfile(null);
             }
           }
           setIsLoading(false);
         });
-
-      return () => profileUnsub();
     });
 
-    return () => unsubscribe();
+    return () => {
+      unsubscribe();
+      if (profileUnsub) profileUnsub();
+      if (partnerUnsub) partnerUnsub();
+    };
   }, []);
 
   return { user, profile };

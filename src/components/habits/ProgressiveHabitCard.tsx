@@ -1,20 +1,13 @@
-import React, { useCallback, useEffect, useState, useRef } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Pressable } from 'react-native';
-import Animated, {
-  useSharedValue,
-  useAnimatedStyle,
-  withTiming,
-  withSpring,
-  runOnJS,
-} from 'react-native-reanimated';
+import Animated from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
+import { useHoldToComplete } from '../../hooks/useHoldToComplete';
 import { HabitDefinition, WaterHabitData, ReadingHabitData } from '../../types/habit';
 import { HabitIcon } from './HabitIcon';
 import { WATER_INCREMENT_OZ, READING_TARGET_PAGES } from '../../config/habits';
 import { useAuthStore } from '../../stores/authStore';
 import { useTheme, typography, fontWeights, spacing, borderRadius } from '../../theme';
-
-const HOLD_DURATION = 500;
 
 interface ProgressiveHabitCardProps {
   definition: HabitDefinition;
@@ -46,67 +39,24 @@ export function ProgressiveHabitCard({
   const unit = isWater ? 'oz' : 'pages';
   const progress = target > 0 ? Math.min(localValue / target, 1) : 0;
 
-  const fillProgress = useSharedValue(0);
-  const cardScale = useSharedValue(1);
-  const holdTimer = useRef<NodeJS.Timeout | null>(null);
-  const isHolding = useRef(false);
-  const justCompleted = useRef(false);
-
-  const triggerHoldComplete = useCallback(() => {
-    justCompleted.current = true;
+  const handleHoldComplete = useCallback(() => {
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     setLocalValue(target);
     onUpdate(target);
-    fillProgress.value = withTiming(0, { duration: 200 });
-    cardScale.value = withSpring(1);
   }, [target, onUpdate]);
 
-  const handlePressIn = useCallback(() => {
-    if (data.completed) return;
-    isHolding.current = true;
-    cardScale.value = withTiming(0.97, { duration: 100 });
-    fillProgress.value = withTiming(1, { duration: HOLD_DURATION });
+  const handleUndo = useCallback(() => {
+    const undoValue = Math.max(0, localValue - increment);
+    setLocalValue(undoValue);
+    onUpdate(undoValue);
+  }, [localValue, increment, onUpdate]);
 
-    holdTimer.current = setTimeout(() => {
-      if (isHolding.current) {
-        runOnJS(triggerHoldComplete)();
-      }
-    }, HOLD_DURATION);
-  }, [data.completed, triggerHoldComplete]);
-
-  const handlePressOut = useCallback(() => {
-    isHolding.current = false;
-    if (holdTimer.current) {
-      clearTimeout(holdTimer.current);
-      holdTimer.current = null;
-    }
-    if (!data.completed) {
-      fillProgress.value = withTiming(0, { duration: 150 });
-    }
-    cardScale.value = withSpring(1);
-  }, [data.completed]);
-
-  const handleTap = useCallback(() => {
-    if (justCompleted.current) {
-      justCompleted.current = false;
-      return;
-    }
-    if (data.completed) {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-      const undoValue = Math.max(0, target - increment);
-      setLocalValue(undoValue);
-      onUpdate(undoValue);
-    }
-  }, [data.completed, target, increment, onUpdate]);
-
-  const fillStyle = useAnimatedStyle(() => ({
-    width: `${fillProgress.value * 100}%`,
-    backgroundColor: `${definition.color}26`,
-  }));
-
-  const cardAnimStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: cardScale.value }],
-  }));
+  const { fillStyle, cardAnimStyle, pressHandlers } = useHoldToComplete({
+    completed: data.completed,
+    onComplete: handleHoldComplete,
+    onUndo: handleUndo,
+    color: definition.color,
+  });
 
   const handleIncrement = useCallback(() => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -127,11 +77,7 @@ export function ProgressiveHabitCard({
   }, [localValue, increment, onUpdate]);
 
   return (
-    <Pressable
-      onPressIn={handlePressIn}
-      onPressOut={handlePressOut}
-      onPress={handleTap}
-    >
+    <Pressable {...pressHandlers}>
       <Animated.View
         style={[
           styles.card,

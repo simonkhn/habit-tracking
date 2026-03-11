@@ -1,16 +1,10 @@
-import React, { useCallback, useRef, useState, useEffect } from 'react';
+import React, { useCallback, useState } from 'react';
 import { View, Text, TextInput, StyleSheet, Pressable, Modal, KeyboardAvoidingView, Platform } from 'react-native';
-import Animated, {
-  useSharedValue,
-  useAnimatedStyle,
-  withTiming,
-  withSpring,
-  runOnJS,
-} from 'react-native-reanimated';
-import * as Haptics from 'expo-haptics';
+import Animated from 'react-native-reanimated';
 import { HabitDefinition, WorkoutHabitData } from '../../types/habit';
 import { HabitIcon } from './HabitIcon';
 import { useTheme, typography, fontWeights, spacing, borderRadius } from '../../theme';
+import { useHoldToComplete } from '../../hooks/useHoldToComplete';
 
 interface WorkoutHabitCardProps {
   definition: HabitDefinition;
@@ -19,26 +13,18 @@ interface WorkoutHabitCardProps {
   onSaveNote: (note: string) => void;
 }
 
-const HOLD_DURATION = 500;
-
 export function WorkoutHabitCard({ definition, data, onToggle, onSaveNote }: WorkoutHabitCardProps) {
   const { colors } = useTheme();
   const completed = data?.completed ?? false;
-  const fillProgress = useSharedValue(0);
-  const cardScale = useSharedValue(1);
-  const holdTimer = useRef<NodeJS.Timeout | null>(null);
-  const isHolding = useRef(false);
-  const justCompleted = useRef(false);
   const [showNoteModal, setShowNoteModal] = useState(false);
   const [noteText, setNoteText] = useState('');
 
-  const triggerComplete = useCallback(() => {
-    justCompleted.current = true;
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    fillProgress.value = withTiming(0, { duration: 200 });
-    cardScale.value = withSpring(1);
-    setShowNoteModal(true);
-  }, []);
+  const { fillStyle, cardAnimStyle, pressHandlers } = useHoldToComplete({
+    completed,
+    onComplete: () => setShowNoteModal(true),
+    onUndo: onToggle,
+    color: definition.color,
+  });
 
   const handleSubmitNote = useCallback(() => {
     if (noteText.trim()) {
@@ -55,58 +41,9 @@ export function WorkoutHabitCard({ definition, data, onToggle, onSaveNote }: Wor
     setNoteText('');
   }, [onToggle]);
 
-  const handlePressIn = useCallback(() => {
-    if (completed) return;
-    isHolding.current = true;
-    cardScale.value = withTiming(0.97, { duration: 100 });
-    fillProgress.value = withTiming(1, { duration: HOLD_DURATION });
-
-    holdTimer.current = setTimeout(() => {
-      if (isHolding.current) {
-        runOnJS(triggerComplete)();
-      }
-    }, HOLD_DURATION);
-  }, [completed, triggerComplete]);
-
-  const handlePressOut = useCallback(() => {
-    isHolding.current = false;
-    if (holdTimer.current) {
-      clearTimeout(holdTimer.current);
-      holdTimer.current = null;
-    }
-    if (!completed) {
-      fillProgress.value = withTiming(0, { duration: 150 });
-    }
-    cardScale.value = withSpring(1);
-  }, [completed]);
-
-  const handleTap = useCallback(() => {
-    if (justCompleted.current) {
-      justCompleted.current = false;
-      return;
-    }
-    if (completed) {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-      onToggle();
-    }
-  }, [completed, onToggle]);
-
-  const fillStyle = useAnimatedStyle(() => ({
-    width: `${fillProgress.value * 100}%`,
-    backgroundColor: `${definition.color}26`,
-  }));
-
-  const cardAnimStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: cardScale.value }],
-  }));
-
   return (
     <>
-      <Pressable
-        onPressIn={handlePressIn}
-        onPressOut={handlePressOut}
-        onPress={handleTap}
-      >
+      <Pressable {...pressHandlers}>
         <Animated.View
           style={[
             styles.card,
